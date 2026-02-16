@@ -10,7 +10,8 @@ public class Invocation {
     // Memory footprint in MBs.
     protected int memory;
     // Function execution time in ms.
-    private final int duration;
+    protected int duration;
+    // TODO: cold start duration?
     // Function start timestamp in ms.
     private final int timestamp;
     // Function finish timestamp in ms.

@@ -8,6 +8,10 @@ public class OutputEntry {
     protected int invocationsProcessed;
     // Cold starts since the last output entry.
     protected int coldStarts;
+    // Total duration of invocations processed since the last output entry.
+    protected int totalDuration;
+    // Total memory footprint of invocations processed since the last output entry.
+    protected int totalFootprint;
     // Current number of users, functions, invocations, and invocation footprint (MBs).
     protected int runningUsers;
     protected int runningFunctions;

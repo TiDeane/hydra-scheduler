@@ -70,6 +70,8 @@ public class InvocationTraceSimulator {
         outputEntry.timestamp = ss.currentTimestamp;
         outputEntry.invocationsProcessed = ss.invocationsProcessed - ss.lastInvocationsProcessed;
         outputEntry.coldStarts = ss.coldStarts;
+        outputEntry.totalDuration = ss.totalDuration;
+        outputEntry.totalFootprint = ss.totalFootprint;
         outputEntry.runningUsers = (int) runningInvocations.parallelStream().map(Invocation::getOwner).distinct().count();
         outputEntry.runningFunctions  = (int) runningInvocations.parallelStream().map(Invocation::getFunction).distinct().count();
         outputEntry.runningInvocations = runningInvocations.size();
@@ -86,6 +88,8 @@ public class InvocationTraceSimulator {
         ss.previousTimestamp = ss.currentTimestamp;
         ss.lastInvocationsProcessed = ss.invocationsProcessed;
         ss.coldStarts = 0;
+        ss.totalDuration = 0;
+        ss.totalFootprint = 0;
     }
 
     protected void updateAfterWarmCheck(SimulationState ss, Invocation currentInvocation, Invocation warm) {
@@ -117,6 +121,8 @@ public class InvocationTraceSimulator {
             // Add invocation to array of active invocations.
             ss.activeInvocations.add(currentInvocation);
             ss.invocationsProcessed++;
+            ss.totalDuration += currentInvocation.getDuration();
+            ss.totalFootprint += currentInvocation.getMemory();
 
             if (ss.currentTimestamp - ss.previousTimestamp > interval) {
                 // Calculate and update statistics.
@@ -128,7 +134,7 @@ public class InvocationTraceSimulator {
             }
 
             // Progress update...
-            if (ss.invocationsProcessed  % Math.max(invocations.size() / 100, 1) == 0) {
+            if (ss.invocationsProcessed % Math.max(invocations.size() / 100, 1) == 0) {
                 System.err.println(String.format("Processed %s (%.2f %%)", ss.invocationsProcessed, ((float) ss.invocationsProcessed / (float)invocations.size() * 100)));
             }
         }

@@ -11,6 +11,8 @@ public class SimulationState {
     public int previousTimestamp;
     public int lastInvocationsProcessed;
     public int coldStarts;
+    public int totalDuration;
+    public int totalFootprint;
 
     public List<Invocation> runningInvocations() {
         return activeInvocations.parallelStream().filter(i -> i.getEndTimestamp() > currentTimestamp).collect(Collectors.toList());
