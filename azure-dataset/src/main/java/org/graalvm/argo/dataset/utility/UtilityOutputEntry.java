@@ -1,9 +1,10 @@
-package org.graalvm.argo.dataset.aot;
+package org.graalvm.argo.dataset.utility;
 
 import org.graalvm.argo.dataset.OutputEntry;
 
-public class AOTOutputEntry extends OutputEntry {
+public class UtilityOutputEntry extends OutputEntry {
 
+    /* Note: for now, only AOT */
     public int optimizedColdStarts;
     protected int runningOptimizedFunctions;
 
