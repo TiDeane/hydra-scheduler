@@ -36,6 +36,8 @@ public class InvocationTraceGenerator {
     private static final int MINUTES_COLUMN_OFFSET = 3;
     private static final List<Invocation> invocations = new LinkedList<>();
     private static final Map<String, Owner> owners = new HashMap<>(2048);
+    private static final Map<String, Integer> compressedOwnerMapping = new HashMap<>(2048);
+    private static boolean compress = false;
     private static int skipped = 0;
 
     private static Options prepareOptions() {
@@ -64,6 +66,9 @@ public class InvocationTraceGenerator {
         Option maxFunctions = new Option("f", "functions", true, "Maximum number of functions in the generated trace.");
         maxFunctions.setRequired(false);
         options.addOption(maxFunctions);
+        Option compress = new Option("c", "compress", false, "Compresses the output trace file.");
+        compress.setRequired(false);
+        options.addOption(compress);
         return options;
     }
 
@@ -79,6 +84,7 @@ public class InvocationTraceGenerator {
             int maxUsers = Integer.parseInt(cmd.getOptionValue("users", "0"));
             int maxConcInv = Integer.parseInt(cmd.getOptionValue("cinv", "0"));
             int maxFunctions = Integer.parseInt(cmd.getOptionValue("functions", "0"));
+            compress = cmd.hasOption("compress");
 
             FunctionInfoStorage.fillFunctionData(day);
             processDay(day, firstMinute, lastMinute);
@@ -127,6 +133,26 @@ public class InvocationTraceGenerator {
                 writer.newLine();
             }
         }
+        if (compress) {
+            /* Write mapping of compressed function ID to real hashes */
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath + ".function_mapping", false))) {
+                writer.write("HashFunction,CompressedHash");
+                writer.newLine();
+                for (String function : FunctionInfoStorage.COMPRESSED_MAPPING.keySet()) {
+                    writer.write(function + "," + FunctionInfoStorage.COMPRESSED_MAPPING.get(function));
+                    writer.newLine();
+                }
+            }
+            /* Write mapping of compressed owner IDs to real hashes */
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath + ".owner_mapping", false))) {
+                writer.write("HashOwner,CompressedHash");
+                writer.newLine();
+                for (String owner : compressedOwnerMapping.keySet()) {
+                    writer.write(owner + "," + compressedOwnerMapping.get(owner));
+                    writer.newLine();
+                }
+            }
+        }
     }
 
     private static void processFunction(String line, int firstMinute, int lastMinute) {
@@ -134,11 +160,20 @@ public class InvocationTraceGenerator {
         String owner = splitRow[0];
         String app = splitRow[1];
         String function = splitRow[2];
+        String compressedFunctionHash = function;
+        String compressedOwnerHash = owner;
 
         /* If there is no record about this function about avg duration or memory, then skip */
         if (!FunctionInfoStorage.DURATIONS.containsKey(function) || !FunctionInfoStorage.MEMORIES.containsKey(app)) {
             ++skipped;
             return;
+        }
+
+        if (compress) {
+            compressedOwnerMapping.put(owner, compressedOwnerMapping.size());
+            compressedOwnerHash = compressedOwnerMapping.get(owner).toString();
+            FunctionInfoStorage.COMPRESSED_MAPPING.put(function, FunctionInfoStorage.COMPRESSED_MAPPING.size());
+            compressedFunctionHash = FunctionInfoStorage.COMPRESSED_MAPPING.get(function).toString();
         }
 
         int memory = FunctionInfoStorage.MEMORIES.get(app);
@@ -152,7 +187,7 @@ public class InvocationTraceGenerator {
             int minEndMs = minBeginningMs + 60000;
             for (int i = 0; i < invocationsForMinute; ++i) {
                 int timestamp = ThreadLocalRandom.current().nextInt(minBeginningMs, minEndMs);
-                invocations.add(new Invocation(owner, function, memory, duration, timestamp));
+                invocations.add(new Invocation(compressedOwnerHash, compressedFunctionHash, memory, duration, timestamp));
             }
             ++currentMinute;
         }
