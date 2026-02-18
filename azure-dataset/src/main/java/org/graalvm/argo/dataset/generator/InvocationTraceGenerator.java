@@ -119,7 +119,6 @@ public class InvocationTraceGenerator {
                 System.err.println("Finished downscaling to " + maxMemory + " MB of memory.");
             }
 
-            System.out.println("Final number of invocations: " + invocations.size());
             writeInvocationsToFile(currentInput, outputFilePath);
 
             /* Clear temporary files */
@@ -246,6 +245,7 @@ public class InvocationTraceGenerator {
      */
     private static void processDay(String datasetId, int firstMinute, int lastMinute) {
         try {
+            new File("/tmp/generator").mkdirs();
             File file = new File("input/invocations_per_function_md.anon." + datasetId + ".csv");
             BufferedReader br = new BufferedReader(new FileReader(file));
             BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/generator/raw_unsorted_trace.csv", false));
