@@ -17,7 +17,7 @@ import org.graalvm.argo.dataset.utility.utils.UtilityCalculator;
 
 /**
  * This class is an extension of InvocationTraceSimulator that also
- * allows for simulating AOT optimizations.
+ * allows for simulating the application of optimizations using utility scores.
  */
 public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
