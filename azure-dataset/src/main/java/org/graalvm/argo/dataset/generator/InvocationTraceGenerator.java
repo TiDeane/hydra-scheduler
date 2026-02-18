@@ -6,15 +6,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -26,6 +22,8 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.graalvm.argo.dataset.Invocation;
+
+import org.graalvm.argo.dataset.utils.ExternalTraceSorter;
 
 /**
  * This class generates an invocation trace from the azure dataset. Given a set
@@ -90,33 +88,44 @@ public class InvocationTraceGenerator {
             FunctionInfoStorage.fillFunctionData(day);
             processDay(day, firstMinute, lastMinute);
 
+            String currentInput = "/tmp/generator/sorted_trace.csv";
+            String currentOutput = "/tmp/generator/temp_buffer.csv";
+
             if (maxFunctions != 0) {
-                System.out.println("Number of invocations *before* filter by number of functions: " + invocations.size());
-                downscaleByFunctions(maxFunctions);
-                System.out.println("Number of invocations *after* filter by number of functions: " + invocations.size());
+                downscaleByFunctions(currentInput, currentOutput, maxFunctions);
+                currentInput = currentOutput; 
+                currentOutput = (currentInput.contains("buffer")) ? "/tmp/generator/temp_work.csv" : "/tmp/generator/temp_buffer.csv";
+                System.err.println("Finished downscaling to " + maxFunctions + " functions.");
             }
 
             if (maxConcInv != 0) {
-                System.out.println("Number of invocations *before* filter by concurrent invocations: " + invocations.size());
-                downscaleByConcurrentInvocations(maxConcInv);
-                System.out.println("Number of invocations *after* filter by concurrent invocations: " + invocations.size());
+                downscaleByConcurrentInvocations(currentInput, currentOutput, maxConcInv);
+                currentInput = currentOutput;
+                currentOutput = (currentInput.contains("buffer")) ? "/tmp/generator/temp_work.csv" : "/tmp/generator/temp_buffer.csv";
+                System.err.println("Finished downscaling to " + maxConcInv + " concurrent invocations.");
             }
 
             if (maxUsers != 0) {
-                System.out.println("Number of invocations *before* filter by number of users: " + invocations.size());
-                downscaleByUser(maxUsers);
-                System.out.println("Number of invocations *after* filter by number of users: " + invocations.size());
+                downscaleByUser(currentInput, currentOutput, maxUsers);
+                currentInput = currentOutput;
+                currentOutput = (currentInput.contains("buffer")) ? "/tmp/generator/temp_work.csv" : "/tmp/generator/temp_buffer.csv";
+                System.err.println("Finished downscaling to " + maxUsers + " users.");
             }
 
             if (maxMemory != 0) {
-                System.out.println("Number of invocations *before* filter by memory: " + invocations.size());
-                downscaleByMemory(maxMemory);
-                System.out.println("Number of invocations *after* filter by memory: " + invocations.size());
+                downscaleByMemory(currentInput, currentOutput, maxMemory);
+                currentInput = currentOutput;
+                currentOutput = (currentInput.contains("buffer")) ? "/tmp/generator/temp_work.csv" : "/tmp/generator/temp_buffer.csv";
+                System.err.println("Finished downscaling to " + maxMemory + " MB of memory.");
             }
 
             System.out.println("Final number of invocations: " + invocations.size());
-            writeInvocationsToFile(outputFilePath);
+            writeInvocationsToFile(currentInput, outputFilePath);
 
+            /* Clear temporary files */
+            new File("/tmp/generator/sorted_trace.csv").delete();
+            new File("/tmp/generator/temp_work.csv").delete();
+            new File("/tmp/generator/temp_buffer.csv").delete();
         } catch (ParseException e) {
             System.out.println(e.getMessage());
             new HelpFormatter().printHelp("utility-name", options);
@@ -124,39 +133,56 @@ public class InvocationTraceGenerator {
         }
     }
 
-    private static void writeInvocationsToFile(String outputFilePath) throws Exception {
-        int firstTimestamp = invocations.get(0).getTimestamp();
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath, false))) {
+    private static void writeInvocationsToFile(String inputFilePath, String outputFilePath) throws Exception {
+        int firstTimestamp = 0;
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFilePath))) {
+            String firstLine = reader.readLine();
+            if (firstLine != null) {
+                String[] splitRow = firstLine.split(DELIMITER);
+                firstTimestamp = Integer.parseInt(splitRow[4]);
+            }
+        }
+
+        /* Stream from the final temp file to the final output file */
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFilePath));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath, false))) {
+            
             writer.write("HashOwner,HashFunction,AverageAllocatedMb,AverageDuration,Timestamp");
             writer.newLine();
-            for (Invocation invocation : invocations) {
-                writer.write(invocation.toString(firstTimestamp));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(DELIMITER);
+                String owner = parts[0];
+                String function = parts[1];
+                String memory = parts[2];
+                String duration = parts[3];
+                int timestamp = Integer.parseInt(parts[4]);
+                
+                int normalizedTimestamp = timestamp - firstTimestamp;
+
+                writer.write(String.format("%s,%s,%s,%s,%d", owner, function, memory, duration, normalizedTimestamp));
                 writer.newLine();
             }
         }
+
         if (compress) {
-            /* Write mapping of compressed function ID to real hashes */
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath + ".function_mapping", false))) {
-                writer.write("HashFunction,CompressedHash");
+            writeMapping(outputFilePath + ".function_mapping", "HashFunction,CompressedHash", FunctionInfoStorage.COMPRESSED_MAPPING);
+            writeMapping(outputFilePath + ".owner_mapping", "HashOwner,CompressedHash", compressedOwnerMapping);
+        }
+    }
+
+    private static void writeMapping(String path, String header, Map<String, ?> mapping) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(path, false))) {
+            writer.write(header);
+            writer.newLine();
+            for (Map.Entry<String, ?> entry : mapping.entrySet()) {
+                writer.write(entry.getKey() + "," + entry.getValue());
                 writer.newLine();
-                for (String function : FunctionInfoStorage.COMPRESSED_MAPPING.keySet()) {
-                    writer.write(function + "," + FunctionInfoStorage.COMPRESSED_MAPPING.get(function));
-                    writer.newLine();
-                }
-            }
-            /* Write mapping of compressed owner IDs to real hashes */
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath + ".owner_mapping", false))) {
-                writer.write("HashOwner,CompressedHash");
-                writer.newLine();
-                for (String owner : compressedOwnerMapping.keySet()) {
-                    writer.write(owner + "," + compressedOwnerMapping.get(owner));
-                    writer.newLine();
-                }
             }
         }
     }
 
-    private static void processFunction(String line, int firstMinute, int lastMinute) {
+    private static void processFunction(String line, int firstMinute, int lastMinute, BufferedWriter bw) {
         String[] splitRow = line.split(DELIMITER);
         String owner = splitRow[0];
         String app = splitRow[1];
@@ -187,8 +213,21 @@ public class InvocationTraceGenerator {
             int minBeginningMs = (currentMinute - 1) * 60000;
             int minEndMs = minBeginningMs + 60000;
             for (int i = 0; i < invocationsForMinute; ++i) {
-                int timestamp = ThreadLocalRandom.current().nextInt(minBeginningMs, minEndMs);
-                invocations.add(new Invocation(compressedOwnerHash, compressedFunctionHash, memory, duration, timestamp));
+                //int timestamp = ThreadLocalRandom.current().nextInt(minBeginningMs, minEndMs);
+                int timestamp = RANDOM.nextInt(minEndMs - minBeginningMs) + minBeginningMs;
+                String csvLine = String.join(",", 
+                    compressedOwnerHash, 
+                    compressedFunctionHash, 
+                    String.valueOf(memory), 
+                    String.valueOf(duration), 
+                    String.valueOf(timestamp)
+                );
+                try {
+                    bw.write(csvLine);
+                    bw.newLine();
+                } catch (IOException ioe) {
+                    ioe.printStackTrace();
+                }
             }
             ++currentMinute;
         }
@@ -210,81 +249,142 @@ public class InvocationTraceGenerator {
         try {
             File file = new File("input/invocations_per_function_md.anon." + datasetId + ".csv");
             BufferedReader br = new BufferedReader(new FileReader(file));
+            BufferedWriter bw = new BufferedWriter(new FileWriter("/tmp/generator/raw_unsorted_trace.csv", false));
             String line;
             br.readLine(); // To skip the header
             int fcounter = 1;
 
             while ((line = br.readLine()) != null) {
-                processFunction(line, firstMinute, lastMinute);
+                processFunction(line, firstMinute, lastMinute, bw);
                 System.out.println("Processed function " + fcounter++);
             }
             System.out.println("Skipped " + skipped + " functions due to lack of information.");
+            bw.close();
             br.close();
         } catch(IOException ioe) {
             ioe.printStackTrace();
         }
 
         /* At this point, we have the unordered list of all invocations */
-        Collections.sort(invocations, Comparator.comparingInt(Invocation::getTimestamp));
+        try {
+            ExternalTraceSorter.sortTraceByTimestamp("/tmp/generator/raw_unsorted_trace.csv", "/tmp/generator/sorted_trace.csv", false);
+            new File("/tmp/generator/raw_unsorted_trace.csv").delete();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
         System.out.println("Finished sorting.");
     }
 
     /* Remove invocations that go over the maximum number of concurrent invocations. */
-    private static void downscaleByConcurrentInvocations(int maxConcInv) {
-        List<Invocation> activeInvocations = new LinkedList<>();
-        ListIterator<Invocation> iter = invocations.listIterator();
-        while (iter.hasNext()) {
-            Invocation currentInvocation = iter.next();
-            int currentInvocationTimestamp = currentInvocation.getTimestamp();
+    private static void downscaleByConcurrentInvocations(String inputPath, String outputPath, int maxConcInv) throws IOException {
+        List<Integer> activeInvocationsEndTimes = new LinkedList<>();
 
-            activeInvocations.removeIf(f -> currentInvocationTimestamp >= f.getEndTimestamp());
-            long currentInvokes = activeInvocations.size();
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputPath));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
 
-            if (currentInvokes + 1 <= maxConcInv) {
-                activeInvocations.add(currentInvocation);
-            } else {
-                iter.remove();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] splitRow = line.split(DELIMITER);
+                int duration = Integer.parseInt(splitRow[3]);
+                int timestamp = Integer.parseInt(splitRow[4]);
+                int endTimestamp = timestamp + duration;
+
+                /* Note: this is REALLY slow */
+                activeInvocationsEndTimes.removeIf(endTime -> timestamp >= endTime);
+
+                if (activeInvocationsEndTimes.size() < maxConcInv) {
+                    activeInvocationsEndTimes.add(endTimestamp);
+                    
+                    writer.write(line);
+                    writer.newLine();
+                } /* else: skip writing */
             }
         }
     }
 
     /* Remove invocations that are not from the N more popular users. */
-    private static void downscaleByUser(int maxUsers) {
+    private static void downscaleByUser(String inputPath, String outputPath, int maxUsers) throws IOException {
         Set<String> selectedOwners = owners.values().stream()
                 .sorted(Comparator.comparingInt(Owner::getFunctions).reversed())
                 .limit(maxUsers).map(Owner::getOwnerHash).collect(Collectors.toSet());
-        invocations.removeIf(i -> !selectedOwners.contains(i.getOwner()));
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputPath));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] splitRow = line.split(DELIMITER);
+                String owner = splitRow[0];
+                if (selectedOwners.contains(owner)) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+        }
     }
 
     /* Remove invocations that are not from the N first functions that appear in the trace. */
-    private static void downscaleByFunctions(int maxFunctions) {
-        Set<String> selectedFunctions = new HashSet<>();
-        Map<String, Long> invocationsFunction = invocations.stream()
-                .collect(Collectors.groupingBy(Invocation::getFunction, Collectors.counting()));
-        int skipFunctions = (invocationsFunction.size() - maxFunctions) / 2;
-        invocationsFunction.entrySet().stream()
-                 .sorted(Map.Entry.comparingByValue())
-                 .skip(skipFunctions)
-                 .limit(maxFunctions)
-                 .forEach(entry -> selectedFunctions.add(entry.getKey()));
-        invocations.removeIf(i -> !selectedFunctions.contains(i.getFunction()));
+    private static void downscaleByFunctions(String inputPath, String outputPath, int maxFunctions) throws IOException {
+        /* Count function frequencies */
+        Map<String, Long> invocationsFunction = new HashMap<>();
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputPath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] splitRow = line.split(DELIMITER);
+                String functionId = splitRow[1];
+                invocationsFunction.merge(functionId, 1L, Long::sum);
+            }
+        }
+
+        int totalFunctions = invocationsFunction.size();
+        int skipFunctions = Math.max(0, (totalFunctions - maxFunctions) / 2);
+
+        Set<String> selectedFunctions = invocationsFunction.entrySet().stream()
+                .sorted(Map.Entry.comparingByValue())
+                .skip(skipFunctions)
+                .limit(maxFunctions)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+
+        invocationsFunction.clear();
+
+        /* Filter and write */
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputPath));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] splitRow = line.split(DELIMITER);
+                String functionId = splitRow[1];
+                if (selectedFunctions.contains(functionId)) {
+                    writer.write(line);
+                    writer.newLine();
+                }
+            }
+        }
     }
 
     /* Remove invocations that go over the maximum memory. */
-    private static void downscaleByMemory(int maxMemory) {
+    private static void downscaleByMemory(String inputPath, String outputPath, int maxMemory) throws IOException {
         List<Invocation> activeInvocations = new LinkedList<>();
-        ListIterator<Invocation> iter = invocations.listIterator();
-        while (iter.hasNext()) {
-            Invocation currentInvocation = iter.next();
-            int currentInvocationTimestamp = currentInvocation.getTimestamp();
 
-            activeInvocations.removeIf(f -> currentInvocationTimestamp >= f.getEndTimestamp());
-            int currentConsumption = activeInvocations.stream().mapToInt(Invocation::getMemory).sum();
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputPath));
+            BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] splitRow = line.split(DELIMITER);
+                int memory = Integer.parseInt(splitRow[2]);
+                int duration = Integer.parseInt(splitRow[3]);
+                int timestamp = Integer.parseInt(splitRow[4]);
 
-            if (currentConsumption + currentInvocation.getMemory() <= maxMemory) {
-                activeInvocations.add(currentInvocation);
-            } else {
-                iter.remove();
+                int currentInvocationTimestamp = timestamp;
+
+                activeInvocations.removeIf(f -> currentInvocationTimestamp >= f.getEndTimestamp());
+                int currentConsumption = activeInvocations.stream().mapToInt(Invocation::getMemory).sum();
+
+                if (currentConsumption + memory <= maxMemory) {
+                    activeInvocations.add(new Invocation(splitRow[0], splitRow[1], memory, duration, timestamp));
+                    writer.write(line);
+                    writer.newLine();
+                } /* else: skip writing */
             }
         }
     }
