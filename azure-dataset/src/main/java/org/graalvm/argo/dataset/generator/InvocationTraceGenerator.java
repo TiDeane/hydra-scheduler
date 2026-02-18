@@ -14,6 +14,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -170,9 +171,9 @@ public class InvocationTraceGenerator {
         }
 
         if (compress) {
-            compressedOwnerMapping.put(owner, compressedOwnerMapping.size());
+            compressedOwnerMapping.computeIfAbsent(owner, k -> compressedOwnerMapping.size());
             compressedOwnerHash = compressedOwnerMapping.get(owner).toString();
-            FunctionInfoStorage.COMPRESSED_MAPPING.put(function, FunctionInfoStorage.COMPRESSED_MAPPING.size());
+            FunctionInfoStorage.COMPRESSED_MAPPING.computeIfAbsent(function, k -> FunctionInfoStorage.COMPRESSED_MAPPING.size());
             compressedFunctionHash = FunctionInfoStorage.COMPRESSED_MAPPING.get(function).toString();
         }
 
@@ -192,10 +193,10 @@ public class InvocationTraceGenerator {
             ++currentMinute;
         }
         if (invocationCount > 0) {
-            if (!owners.containsKey(owner)) {
-                owners.put(owner, new Owner(owner));
+            if (!owners.containsKey(compressedOwnerHash)) {
+                owners.put(compressedOwnerHash, new Owner(compressedOwnerHash));
             }
-            Owner currentOwner = owners.get(owner);
+            Owner currentOwner = owners.get(compressedOwnerHash);
             currentOwner.addFunction(function);
             currentOwner.addInvocations(invocationCount);
         }
