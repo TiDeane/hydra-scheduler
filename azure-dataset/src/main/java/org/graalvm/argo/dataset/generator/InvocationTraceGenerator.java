@@ -213,8 +213,7 @@ public class InvocationTraceGenerator {
             int minBeginningMs = (currentMinute - 1) * 60000;
             int minEndMs = minBeginningMs + 60000;
             for (int i = 0; i < invocationsForMinute; ++i) {
-                //int timestamp = ThreadLocalRandom.current().nextInt(minBeginningMs, minEndMs);
-                int timestamp = RANDOM.nextInt(minEndMs - minBeginningMs) + minBeginningMs;
+                int timestamp = ThreadLocalRandom.current().nextInt(minBeginningMs, minEndMs);
                 String csvLine = String.join(",", 
                     compressedOwnerHash, 
                     compressedFunctionHash, 
