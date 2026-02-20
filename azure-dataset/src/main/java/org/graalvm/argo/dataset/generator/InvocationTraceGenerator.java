@@ -33,7 +33,6 @@ public class InvocationTraceGenerator {
 
     public static final String DELIMITER = ",";
     private static final int MINUTES_COLUMN_OFFSET = 3;
-    private static final List<Invocation> invocations = new LinkedList<>();
     private static final Map<String, Owner> owners = new HashMap<>(2048);
     private static final Map<String, Integer> compressedOwnerMapping = new HashMap<>(2048);
     private static boolean compress = false;
