@@ -24,7 +24,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     /**
      * Number of milliseconds between each round of utility calculation and optimization.
      */
-    private static final int UTILITY_CALCULATION_INTERVAL = 60000; // 1 minutes
+    private static final int UTILITY_CALCULATION_INTERVAL = 3600000; // 60 minutes
 
     private final String utilityCalculationMethod;
     private final boolean useAOT;
@@ -37,31 +37,32 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     }
 
     @Override
-    protected Invocation createInvocation(String owner, String function, int memory, int duration, int timestamp) {
-        return new UtilityInvocation(owner, function, memory, duration, timestamp);
+    protected Invocation createInvocation(String owner, String function, int memory, int p25duration, int p99duration, int timestamp) {
+        return new UtilityInvocation(owner, function, memory, p25duration, p99duration, timestamp);
     }
 
     class UtilitySimulationState extends SimulationState {
         int optimizedColdStarts;
+        float optimizationCost;
         UtilityCalculator utilityCalculator;
 
         public UtilitySimulationState() {
             this.optimizedColdStarts = 0;
             switch (utilityCalculationMethod) {
                 case "naive":
-                    this.utilityCalculator = new NaiveUtilityCalculator();
+                    this.utilityCalculator = new NaiveUtilityCalculator(useAOT, useSnapshotting);
                     break;
                 case "extended":
-                    this.utilityCalculator = new ExtendedUtilityCalculator();
+                    this.utilityCalculator = new ExtendedUtilityCalculator(useAOT, useSnapshotting);
                     break;
                 case "longest-running":
-                    this.utilityCalculator = new LongestRunningUtilityCalculator();
+                    this.utilityCalculator = new LongestRunningUtilityCalculator(useAOT, useSnapshotting);
                     break;
                 case "random":
-                	this.utilityCalculator = new RandomUtilityCalculator();
+                	this.utilityCalculator = new RandomUtilityCalculator(useAOT, useSnapshotting);
                 	break;
                 default:
-                    this.utilityCalculator = new NaiveUtilityCalculator();
+                    this.utilityCalculator = new NaiveUtilityCalculator(useAOT, useSnapshotting);
             }
         }
     }
@@ -90,15 +91,22 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         String currentFunction = currentUtilityInvocation.getFunction();
         utilityss.utilityCalculator.registerInvocation(currentFunction, currentInvocation.getMemory(), currentInvocation.getDuration());
         if (warm == null) {
+            currentInvocation.setDuration(currentInvocation.getP99Duration());
+            currentInvocation.setEndTimestamp(currentInvocation.getDuration());
             if (utilityss.utilityCalculator.optimized(currentFunction)) {
                 utilityss.optimizedColdStarts++;
                 // Cold start happened, but the function is optimized.
-                currentUtilityInvocation.optimize();
+                if (utilityss.utilityCalculator.optimizedSnapshot(currentFunction)) {
+                    currentUtilityInvocation.optimize("SNAPSHOT");
+                } else {
+                    currentUtilityInvocation.optimize("AOT");
+                }
             }
             utilityss.utilityCalculator.registerColdStart(currentFunction);
         } else {
             // Reuse memory and optimization status of the warm invocation instead of always using unoptimized.
             currentUtilityInvocation.setOptimizedMemory((UtilityInvocation) warm);
+            // duration for warm starts is set to P25 in the superclass
         }
         super.updateAfterWarmCheck(ss, currentInvocation, warm);
     }
@@ -107,7 +115,6 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         return simulateInvocations(invocations, new UtilitySimulationState(), keepalive, interval);
     }
 
-    // Note: can we use "SimulationState" and overrride?
     protected List<OutputEntry> simulateInvocations(List<Invocation> invocations, UtilitySimulationState ss, int keepalive, int interval) {
         List<OutputEntry> statistics = new LinkedList<>();
         ss.utilityCalculator.startTimestamp = invocations.get(0).getTimestamp();
@@ -118,7 +125,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
             if (ss.currentTimestamp - ss.utilityCalculator.lastOptimization > UTILITY_CALCULATION_INTERVAL) {
                 ss.utilityCalculator.calculateUtilityAndOptimize(ss.currentTimestamp);
-                System.err.println("Currently optimized functions: " + ss.utilityCalculator.optimizedFunctions.size());
+                System.err.println("Optimization cost: " + ss.utilityCalculator.getOptimizationCost() + ", at timestamp: " + ss.currentTimestamp);
             }
 
             // Remove invocations that have past their keep alive time.
@@ -132,7 +139,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
             ss.activeInvocations.add(currentInvocation);
             ss.invocationsProcessed++;
             ss.totalDuration += currentInvocation.getDuration();
-            ss.totalFootprint += currentInvocation.getMemory();
+            ss.totalFootprint += currentInvocation.getMemory() * currentInvocation.getDuration() / 1000.0; // Convert to MB-seconds
 
             if (ss.currentTimestamp - ss.previousTimestamp > interval) {
                 // Calculate and update statistics.

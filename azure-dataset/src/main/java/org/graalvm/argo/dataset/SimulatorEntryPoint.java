@@ -38,8 +38,8 @@ public class SimulatorEntryPoint {
             List<OutputEntry> output = simulator.simulate(inputfile, keepalive, SAMPLE_INTERVAL);
 
             int totalColdStarts = 0;
-            int totalDuration = 0;
-            int totalFootprint = 0;
+            long totalDuration = 0;
+            long totalFootprint = 0;
             int totalOptimizedColdStarts = 0;
             for (OutputEntry entry : output) {
                 totalColdStarts += entry.coldStarts;
@@ -69,11 +69,13 @@ public class SimulatorEntryPoint {
         options.addOption(keepalive);
         Option utility = new Option("u", "utility", true, "Enable utility calculation (e.g., naive, longest-running, etc.).");
         utility.setRequired(false);
-        utility.setRequired(false);
         options.addOption(utility);
         Option aot = new Option("aot", "aot", false, "Enable AOT optimization.");
         aot.setRequired(false);
         options.addOption(aot);
+        Option snapshot = new Option("snapshot", "snapshot", false, "Enable snapshotting optimization.");
+        snapshot.setRequired(false);
+        options.addOption(snapshot);
         return options;
     }
 }

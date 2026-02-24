@@ -4,7 +4,6 @@ import org.graalvm.argo.dataset.OutputEntry;
 
 public class UtilityOutputEntry extends OutputEntry {
 
-    /* Note: for now, only AOT */
     public int optimizedColdStarts;
     protected int runningOptimizedFunctions;
 
