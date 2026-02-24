@@ -128,7 +128,7 @@ public class InvocationTraceSimulator {
             ss.activeInvocations.add(currentInvocation);
             ss.invocationsProcessed++;
             ss.totalDuration += currentInvocation.getDuration();
-            ss.totalFootprint += currentInvocation.getMemory();
+            ss.totalFootprint += currentInvocation.getMemory() * currentInvocation.getDuration() / 1000.0;
 
             if (ss.currentTimestamp - ss.previousTimestamp > interval) {
                 // Calculate and update statistics.
