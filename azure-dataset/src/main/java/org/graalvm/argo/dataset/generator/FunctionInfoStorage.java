@@ -14,7 +14,9 @@ public class FunctionInfoStorage {
     /* Key - function */
     public static final Map<String, Integer> DURATIONS = new HashMap<>();
     /* Key - function */
-    public static final Map<String, Integer> P99_DURATIONS = new HashMap<>(); // currently unused
+    public static final Map<String, Integer> P25_DURATIONS = new HashMap<>();
+    /* Key - function */
+    public static final Map<String, Integer> P99_DURATIONS = new HashMap<>();
     /* Key - function */
     public static final Map<String, Integer> COMPRESSED_MAPPING = new HashMap<>();
     /* Key - app */
@@ -44,6 +46,8 @@ public class FunctionInfoStorage {
                 String function = splitRow[2];
                 int averageDuration = Integer.parseInt(splitRow[3]);
                 DURATIONS.put(function, averageDuration);
+                int p25Duration = Integer.parseInt(splitRow[9]);
+                P25_DURATIONS.put(function, p25Duration);
                 int p99Duration = Integer.parseInt(splitRow[12]);
                 P99_DURATIONS.put(function, p99Duration);
             }

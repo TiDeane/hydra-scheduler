@@ -25,8 +25,8 @@ public class AOTInvocationTraceSimulator extends InvocationTraceSimulator {
     private static final int SLIDING_WINDOW_PERIOD = 60000;
 
     @Override
-    protected Invocation createInvocation(String owner, String function, int memory, int duration, int timestamp) {
-        return new AOTInvocation(owner, function, memory, duration, timestamp);
+    protected Invocation createInvocation(String owner, String function, int memory, int p25duration, int p99duration, int timestamp) {
+        return new AOTInvocation(owner, function, memory, p99duration, timestamp);
     }
 
     class AOTSimulationState extends SimulationState {

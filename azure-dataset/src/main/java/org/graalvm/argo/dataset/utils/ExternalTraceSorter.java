@@ -50,8 +50,9 @@ public class ExternalTraceSorter {
           if (cmp != 0) return cmp;
           return Integer.compare(this.fileIndex, o.fileIndex); // stable: earlier chunk wins
       }
-  }
+    }
 
+    /* Columns: HashOwner,HashFunction,AverageAllocatedMb,P25Duration,P99Duration,Timestamp */
     public static void sortTraceByTimestamp(String inputFile, String outputFile, boolean hasHeader) throws IOException {
         List<File> tempFiles = new ArrayList<>();
         String headerLine = null;
@@ -69,7 +70,7 @@ public class ExternalTraceSorter {
                 String[] splitRow = line.split(",");
                 int timestamp = 0;
                 try {
-                  timestamp = Integer.parseInt(splitRow[4]);
+                  timestamp = Integer.parseInt(splitRow[5]);
                 } catch (Exception e) {
                   System.err.println("Error parsing timestamp from line: " + line);
                   throw e;
@@ -105,7 +106,7 @@ public class ExternalTraceSorter {
                 String line = br.readLine();
                 if (line != null) {
                     String[] splitRow = line.split(",");
-                    int timestamp = Integer.parseInt(splitRow[4]);
+                    int timestamp = Integer.parseInt(splitRow[5]);
                     pq.add(new MergeItem(line, timestamp, i, br));
                 }
             }
@@ -122,7 +123,7 @@ public class ExternalTraceSorter {
                 String nextLine = smallest.reader.readLine();
                 if (nextLine != null) {
                     String[] splitRow = nextLine.split(",");
-                    int timestamp = Integer.parseInt(splitRow[4]);
+                    int timestamp = Integer.parseInt(splitRow[5]);
                     smallest.line = nextLine;
                     smallest.timestamp = timestamp;
                     pq.add(smallest);

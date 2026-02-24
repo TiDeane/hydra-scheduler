@@ -21,6 +21,10 @@ public class InvocationTraceSimulator {
         return new Invocation(owner, function, memory, duration, timestamp);
     }
 
+    protected Invocation createInvocation(String owner, String function, int memory, int p25duration, int p99duration, int timestamp) {
+        return new Invocation(owner, function, memory, p25duration, p99duration, timestamp);
+    }
+
     protected List<Invocation> loadInvocations(String invocationsFile) {
         List<Invocation> invocations = new LinkedList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(invocationsFile))) {
@@ -29,7 +33,7 @@ public class InvocationTraceSimulator {
             br.readLine(); // To skip the header
             while ((line = br.readLine()) != null) {
                 splitRow = line.split(InvocationTraceGenerator.DELIMITER);
-                invocations.add(createInvocation(splitRow[0], splitRow[1], Integer.valueOf(splitRow[2]), Integer.valueOf(splitRow[3]), Integer.valueOf(splitRow[4])));
+                invocations.add(createInvocation(splitRow[0], splitRow[1], Integer.valueOf(splitRow[2]), Integer.valueOf(splitRow[3]), Integer.valueOf(splitRow[4]), Integer.valueOf(splitRow[5])));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -96,6 +100,8 @@ public class InvocationTraceSimulator {
         if (warm == null) {
             ss.coldStarts++;
         } else {
+            currentInvocation.setDuration(currentInvocation.getP25Duration());
+            currentInvocation.setEndTimestamp(currentInvocation.getP25Duration());
             ss.activeInvocations.remove(warm);
         }
     }

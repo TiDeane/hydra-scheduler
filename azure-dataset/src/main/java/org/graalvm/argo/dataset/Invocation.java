@@ -11,19 +11,36 @@ public class Invocation {
     protected int memory;
     // Function execution time in ms.
     protected int duration;
-    // TODO: cold start duration?
+    // Function warm start execution time in ms.
+    protected int p25duration;
+    // Function cold start execution time in ms.
+    protected int p99duration;
     // Function start timestamp in ms.
     private final int timestamp;
     // Function finish timestamp in ms.
-    private final int endTimestamp;
+    protected int endTimestamp; // not final, because it depends on warm or cold start
 
     public Invocation(String owner, String function, int memory, int duration, int timestamp) {
         this.owner = owner;
         this.function = function;
         this.memory = memory;
         this.duration = duration;
+        this.p25duration = duration;
+        this.p99duration = duration;
         this.timestamp = timestamp;
         this.endTimestamp = timestamp + duration;
+    }
+
+    public Invocation(String owner, String function, int memory, int p25duration, int p99duration, int timestamp) {
+        this.owner = owner;
+        this.function = function;
+        this.memory = memory;
+        this.duration = p99duration;
+        this.p25duration = p25duration;
+        this.p99duration = p99duration;
+        this.timestamp = timestamp;
+        /* We assume cold start initially, but this value is changed when processing the invocation */
+        this.endTimestamp = timestamp + p99duration;
     }
 
     public String getOwner() {
@@ -42,6 +59,14 @@ public class Invocation {
         return duration;
     }
 
+    public int getP25Duration() {
+        return p25duration;
+    }
+
+    public int getP99Duration() {
+        return p99duration;
+    }
+
     public int getTimestamp() {
         return timestamp;
     }
@@ -50,9 +75,18 @@ public class Invocation {
         return endTimestamp;
     }
 
+    /* When it is determined whether it's a cold or warm start */
+    public void setDuration(int duration) {
+        this.duration = duration;
+    }
+
+    public void setEndTimestamp(int duration) {
+        this.endTimestamp = this.timestamp + duration;
+    }
+
     @Override
     public String toString() {
-        return String.format("%s,%s,%d,%d,%d", owner, function, memory, duration, timestamp);
+        return String.format("%s,%s,%d,%d,%d,%d", owner, function, memory, p25duration, p99duration, timestamp);
     }
 
     public static Comparator<Invocation> comparator() {
@@ -66,6 +100,6 @@ public class Invocation {
     }
 
     public String toString(int firstTimestamp) {
-        return String.format("%s,%s,%d,%d,%d", owner, function, memory, duration, (timestamp - firstTimestamp));
+        return String.format("%s,%s,%d,%d,%d,%d", owner, function, memory, p25duration, p99duration, (timestamp - firstTimestamp));
     }
 }
