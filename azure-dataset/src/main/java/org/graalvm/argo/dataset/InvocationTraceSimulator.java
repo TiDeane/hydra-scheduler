@@ -5,6 +5,8 @@ import org.graalvm.argo.dataset.generator.InvocationTraceGenerator;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
@@ -98,6 +100,7 @@ public class InvocationTraceSimulator {
         List<OutputEntry> statistics = new LinkedList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
+            long totalLines = Files.lines(Paths.get(inputFile)).count() - 1;
             String line;
             br.readLine(); // Skip header
             
@@ -107,6 +110,10 @@ public class InvocationTraceSimulator {
                 Invocation currentInvocation = createInvocation(splitRow[0], splitRow[1], Integer.valueOf(splitRow[2]), Integer.valueOf(splitRow[3]), Integer.valueOf(splitRow[4]), Integer.valueOf(splitRow[5]));
 
                 processInvocation(statistics, currentInvocation, ss, keepalive, interval);
+
+                if (ss.invocationsProcessed % Math.max(totalLines / 100, 1) == 0) {
+                    System.err.println(String.format("Processed %d (%.2f %%)", ss.invocationsProcessed, ((float) ss.invocationsProcessed / totalLines * 100)));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -146,10 +153,5 @@ public class InvocationTraceSimulator {
             // Reset values until the next round.
             resetSimulationStateAfterUpdateStatistics(ss);
         }
-
-        // TODO: Progress update...
-        // if (ss.invocationsProcessed % Math.max(invocations.size() / 100, 1) == 0) {
-        //     System.err.println(String.format("Processed %s (%.2f %%)", ss.invocationsProcessed, ((float) ss.invocationsProcessed / (float)invocations.size() * 100)));
-        // }
     }
 }
