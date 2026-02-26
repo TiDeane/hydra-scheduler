@@ -11,7 +11,7 @@ public abstract class UtilityCalculator {
   /* how many functions to optimize at a time */
   protected static final int OPTIMIZATION_AMOUNT = 1000;
 
-  protected static final int MAX_OPTIMIZED = 2000;
+  protected static final int MAX_OPTIMIZED = 4000;
 
   /* IMPORTANT: THESE VALUES ARE PLACEHOLDERS */
   protected final float SNAPSHOT_CREATION_OVERHEAD = 150;
@@ -30,6 +30,8 @@ public abstract class UtilityCalculator {
   public int startTimestamp;
   /* Used to decide when to optimize functions */
   public int lastOptimization;
+  /* Total seconds used optimizing functions (creating snapshots or AOT-compiling) */
+  public int totalOptimizationCost;
 
   public UtilityCalculator(boolean useAOT, boolean useSnapshotting) {
     this.USE_AOT = useAOT;
@@ -38,6 +40,7 @@ public abstract class UtilityCalculator {
     this.optimizedFunctionsAOT = new HashSet<>();
     this.optimizedFunctionsSnapshot = new HashSet<>();
     this.lastOptimization = 0;
+    this.totalOptimizationCost = 0;
   }
 
   public boolean optimizedAOT(String function) {
@@ -73,6 +76,7 @@ public abstract class UtilityCalculator {
 
   public void calculateUtilityAndOptimize(int currentTimestamp) {
     System.err.println("Total optimized: " + (optimizedFunctionsAOT.size() + optimizedFunctionsSnapshot.size()) + " functions");
+    this.totalOptimizationCost += getOptimizationCost();
     this.lastOptimization = currentTimestamp;
   }
 
