@@ -13,6 +13,7 @@ import org.graalvm.argo.dataset.utility.utils.NaiveUtilityCalculator;
 import org.graalvm.argo.dataset.utility.utils.RandomUtilityCalculator;
 import org.graalvm.argo.dataset.utility.utils.ExtendedUtilityCalculator;
 import org.graalvm.argo.dataset.utility.utils.LongestRunningUtilityCalculator;
+import org.graalvm.argo.dataset.utility.utils.NoOptUtilityCalculator;
 import org.graalvm.argo.dataset.utility.utils.UtilityCalculator;
 
 /**
@@ -61,12 +62,14 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
                 case "random":
                 	this.utilityCalculator = new RandomUtilityCalculator(useAOT, useSnapshotting);
                 	break;
+                case "no-opt":
+                	this.utilityCalculator = new NoOptUtilityCalculator(useAOT, useSnapshotting);
+                	break;
                 default:
                     this.utilityCalculator = new NaiveUtilityCalculator(useAOT, useSnapshotting);
             }
         }
     }
-
 
     @Override
     protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, List<Invocation> runningInvocations, SimulationState ss) {
@@ -86,8 +89,14 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
     @Override
     protected void updateAfterWarmCheck(SimulationState ss, Invocation currentInvocation, Invocation warm) {
-        UtilityInvocation currentUtilityInvocation = (UtilityInvocation) currentInvocation;
         UtilitySimulationState utilityss = ((UtilitySimulationState)ss);
+
+        /* We make use of this function to optimize if the utility calculation interval has passed  */
+        if (utilityss.currentTimestamp - utilityss.utilityCalculator.lastOptimization > UTILITY_CALCULATION_INTERVAL) {
+            utilityss.utilityCalculator.calculateUtilityAndOptimize(utilityss.currentTimestamp);
+        }
+
+        UtilityInvocation currentUtilityInvocation = (UtilityInvocation) currentInvocation;
         String currentFunction = currentUtilityInvocation.getFunction();
         utilityss.utilityCalculator.registerInvocation(currentFunction, currentInvocation.getMemory(), currentInvocation.getDuration());
         if (warm == null) {
@@ -111,54 +120,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         super.updateAfterWarmCheck(ss, currentInvocation, warm);
     }
 
-    protected List<OutputEntry> simulateInvocations(List<Invocation> invocations, int keepalive, int interval) {
-        return simulateInvocations(invocations, new UtilitySimulationState(), keepalive, interval);
-    }
-
-    protected List<OutputEntry> simulateInvocations(List<Invocation> invocations, UtilitySimulationState ss, int keepalive, int interval) {
-        List<OutputEntry> statistics = new LinkedList<>();
-        ss.utilityCalculator.startTimestamp = invocations.get(0).getTimestamp();
-
-        System.err.println("Simulating trace with " + invocations.size() + " invocations and keepalive of " + keepalive);
-        for (Invocation currentInvocation : invocations) {
-            ss.currentTimestamp = currentInvocation.getTimestamp();
-
-            if (ss.currentTimestamp - ss.utilityCalculator.lastOptimization > UTILITY_CALCULATION_INTERVAL) {
-                ss.utilityCalculator.calculateUtilityAndOptimize(ss.currentTimestamp);
-                System.err.println("Optimization cost: " + ss.utilityCalculator.getOptimizationCost() + ", at timestamp: " + ss.currentTimestamp);
-            }
-
-            // Remove invocations that have past their keep alive time.
-            evictTimedOutInvocations(ss.activeInvocations, ss.currentTimestamp, keepalive);
-
-            // We try to find an inactive invocation that can be replaced with the new one.
-            Invocation warm = findWarmInvocation(ss.activeInvocations, ss.currentTimestamp, currentInvocation.getFunction());
-            updateAfterWarmCheck(ss, currentInvocation, warm);
-
-            // Add invocation to array of active invocations.
-            ss.activeInvocations.add(currentInvocation);
-            ss.invocationsProcessed++;
-            ss.totalDuration += currentInvocation.getDuration();
-            ss.totalFootprint += currentInvocation.getMemory() * currentInvocation.getDuration() / 1000.0; // Convert to MB-seconds
-
-            if (ss.currentTimestamp - ss.previousTimestamp > interval) {
-                // Calculate and update statistics.
-                List<Invocation> runningInvocations = ss.activeInvocations.parallelStream().filter(i -> i.getEndTimestamp() > ss.currentTimestamp).collect(Collectors.toList());
-                statistics.add(updateStatistics(ss.activeInvocations, runningInvocations, ss));
-
-                // Reset values until the next round.
-                resetSimulationStateAfterUpdateStatistics(ss);
-            }
-
-            // Progress update...
-            if (ss.invocationsProcessed % Math.max(invocations.size() / 100, 1) == 0) {
-                System.err.println(String.format("Processed %s (%.2f %%)", ss.invocationsProcessed, ((float) ss.invocationsProcessed / (float)invocations.size() * 100)));
-            }
-        }
-
-        // Final update to statistics.
-        statistics.add(updateStatistics(ss.activeInvocations, ss.runningInvocations(), ss));
-
-        return statistics;
+    protected List<OutputEntry> simulateInvocations(String inputFile, int keepalive, int interval) {
+        return simulateInvocations(inputFile, new UtilitySimulationState(), keepalive, interval);
     }
 }
