@@ -71,7 +71,7 @@ public class AOTInvocationTraceSimulator extends InvocationTraceSimulator {
         super.updateAfterWarmCheck(ss, currentInvocation, warm);
     }
 
-    protected List<OutputEntry> simulateInvocations(List<Invocation> invocations, int keepalive, int interval) {
-        return simulateInvocations(invocations, new AOTSimulationState(), keepalive, interval);
+    protected List<OutputEntry> simulateInvocations(String inputFile, int keepalive, int interval) {
+        return simulateInvocations(inputFile, new AOTSimulationState(), keepalive, interval);
     }
 }

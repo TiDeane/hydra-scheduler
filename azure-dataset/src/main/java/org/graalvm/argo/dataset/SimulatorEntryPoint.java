@@ -41,6 +41,7 @@ public class SimulatorEntryPoint {
             long totalDuration = 0;
             long totalFootprint = 0;
             int totalOptimizedColdStarts = 0;
+            
             for (OutputEntry entry : output) {
                 totalColdStarts += entry.coldStarts;
                 totalDuration += entry.totalDuration;
