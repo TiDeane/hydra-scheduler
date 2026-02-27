@@ -1,14 +1,18 @@
 package org.graalvm.argo.dataset;
 
 import org.graalvm.argo.dataset.generator.InvocationTraceGenerator;
+import org.graalvm.argo.dataset.generator.FunctionInfoStorage;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -19,12 +23,44 @@ import java.util.stream.Collectors;
  */
 public class InvocationTraceSimulator {
 
+    /*
+    HashFunction/CompressedHash, P50Duration, P99Duration
+     */
+    private static void fillDurations(String inputFile) {
+        String statsFilePath = inputFile + ".function_durations";
+        File statsFile = new File(statsFilePath);
+
+        if (!statsFile.exists()) {
+            return;
+        }
+        
+        FunctionInfoStorage.P50_DURATIONS.clear();
+        FunctionInfoStorage.P99_DURATIONS.clear();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(statsFile))) {
+            String line;
+            br.readLine(); // Skip header
+            
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                String hash = parts[0];
+                int p50 = Integer.valueOf(parts[1]);
+                int p99 = Integer.valueOf(parts[2]);
+
+                FunctionInfoStorage.P50_DURATIONS.put(hash, p50);
+                FunctionInfoStorage.P99_DURATIONS.put(hash, p99);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     protected Invocation createInvocation(String owner, String function, int memory, int duration, int timestamp) {
         return new Invocation(owner, function, memory, duration, timestamp);
     }
 
-    protected Invocation createInvocation(String owner, String function, int memory, int p25duration, int p99duration, int timestamp) {
-        return new Invocation(owner, function, memory, p25duration, p99duration, timestamp);
+    protected Invocation createInvocation(String owner, String function, int memory, int p50duration, int p99duration, int timestamp) {
+        return new Invocation(owner, function, memory, p50duration, p99duration, timestamp);
     }
 
     protected void evictTimedOutInvocations(TreeSet<? extends Invocation> activeInvocations, int timestamp, int keepalive) {
@@ -86,8 +122,8 @@ public class InvocationTraceSimulator {
         if (warm == null) {
             ss.coldStarts++;
         } else {
-            currentInvocation.setDuration(currentInvocation.getP25Duration());
-            currentInvocation.setEndTimestamp(currentInvocation.getP25Duration());
+            currentInvocation.setDuration(currentInvocation.getP50Duration());
+            currentInvocation.setEndTimestamp(currentInvocation.getP50Duration());
             ss.activeInvocations.remove(warm);
         }
     }
@@ -98,6 +134,7 @@ public class InvocationTraceSimulator {
 
     protected List<OutputEntry> simulateInvocations(String inputFile, SimulationState ss, int keepalive, int interval) {
         List<OutputEntry> statistics = new LinkedList<>();
+        fillDurations(inputFile);
 
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
             long totalLines = Files.lines(Paths.get(inputFile)).count() - 1;
@@ -106,8 +143,21 @@ public class InvocationTraceSimulator {
             
             while ((line = br.readLine()) != null) {
                 String[] splitRow = line.split(InvocationTraceGenerator.DELIMITER);
+                String owner = splitRow[0];
+                String function = splitRow[1];
+                int memory = Integer.valueOf(splitRow[2]);
+                int averageDuration = Integer.valueOf(splitRow[3]);
+                int timestamp = Integer.valueOf(splitRow[4]);
                 
-                Invocation currentInvocation = createInvocation(splitRow[0], splitRow[1], Integer.valueOf(splitRow[2]), Integer.valueOf(splitRow[3]), Integer.valueOf(splitRow[4]), Integer.valueOf(splitRow[5]));
+                Invocation currentInvocation;
+                if (!FunctionInfoStorage.P50_DURATIONS.containsKey(function) || !FunctionInfoStorage.P99_DURATIONS.containsKey(function)) {
+                    // use average duration
+                    currentInvocation = createInvocation(owner, function, memory, averageDuration, timestamp);
+                } else {
+                    int p50duration = FunctionInfoStorage.P50_DURATIONS.get(function);
+                    int p99duration = FunctionInfoStorage.P99_DURATIONS.get(function);
+                    currentInvocation = createInvocation(owner, function, memory, p50duration, p99duration, timestamp);
+                }
 
                 processInvocation(statistics, currentInvocation, ss, keepalive, interval);
 

@@ -23,8 +23,8 @@ public class UtilityInvocation extends Invocation {
         this.optimizationType = OptimizationType.NONE;
     }
 
-    public UtilityInvocation(String owner, String function, int memory, int p25duration, int p99duration, int timestamp) {
-        super(owner, function, memory, p25duration, p99duration, timestamp);
+    public UtilityInvocation(String owner, String function, int memory, int p50duration, int p99duration, int timestamp) {
+        super(owner, function, memory, p50duration, p99duration, timestamp);
         this.optimized = false;
         this.optimizationType = OptimizationType.NONE;
     }
@@ -42,7 +42,7 @@ public class UtilityInvocation extends Invocation {
             this.optimizationType = OptimizationType.SNAPSHOT;
             memory = (int) ((double) memory * OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO);
             // note: should we use p50 or p75 for snapshotting? Since snapshot-restored executions are slower than normal warm starts
-            duration = (int) ((double) p25duration + SNAPSHOT_RESTORE_PENALTY);
+            duration = (int) ((double) p50duration + SNAPSHOT_RESTORE_PENALTY);
         } else {
             this.optimizationType = OptimizationType.AOT;
             memory = (int) ((double) memory * OPTIMIZED_AOT_FOOTPRINT_RATIO);

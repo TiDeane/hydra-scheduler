@@ -38,8 +38,13 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     }
 
     @Override
-    protected Invocation createInvocation(String owner, String function, int memory, int p25duration, int p99duration, int timestamp) {
-        return new UtilityInvocation(owner, function, memory, p25duration, p99duration, timestamp);
+    protected Invocation createInvocation(String owner, String function, int memory, int duration, int timestamp) {
+        return new UtilityInvocation(owner, function, memory, duration, timestamp);
+    }
+
+    @Override
+    protected Invocation createInvocation(String owner, String function, int memory, int p50duration, int p99duration, int timestamp) {
+        return new UtilityInvocation(owner, function, memory, p50duration, p99duration, timestamp);
     }
 
     class UtilitySimulationState extends SimulationState {
@@ -115,7 +120,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         } else {
             // Reuse memory and optimization status of the warm invocation instead of always using unoptimized.
             currentUtilityInvocation.setOptimizedMemory((UtilityInvocation) warm);
-            // duration for warm starts is set to P25 in the superclass
+            // duration for warm starts is set to P50 in the superclass
         }
         super.updateAfterWarmCheck(ss, currentInvocation, warm);
     }

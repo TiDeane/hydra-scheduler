@@ -29,6 +29,11 @@ public class AOTInvocationTraceSimulator extends InvocationTraceSimulator {
         return new AOTInvocation(owner, function, memory, p99duration, timestamp);
     }
 
+    @Override
+    protected Invocation createInvocation(String owner, String function, int memory, int duration, int timestamp) {
+        return new AOTInvocation(owner, function, memory, duration, timestamp);
+    }
+
     class AOTSimulationState extends SimulationState {
         int optimizedColdStarts;
         ColdStartSlidingWindow window = new ColdStartSlidingWindow(AOT_OPTIMIZATION_THRESHOLD, SLIDING_WINDOW_PERIOD);
