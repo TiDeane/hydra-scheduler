@@ -137,7 +137,7 @@ public class InvocationTraceGenerator {
             String firstLine = reader.readLine();
             if (firstLine != null) {
                 String[] splitRow = firstLine.split(DELIMITER);
-                firstTimestamp = Integer.parseInt(splitRow[5]);
+                firstTimestamp = Integer.parseInt(splitRow[4]);
             }
         }
 
@@ -145,7 +145,7 @@ public class InvocationTraceGenerator {
         try (BufferedReader reader = new BufferedReader(new FileReader(inputFilePath));
             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath, false))) {
             
-            writer.write("HashOwner,HashFunction,AverageAllocatedMb,P25Duration,P99Duration,Timestamp");
+            writer.write("HashOwner,HashFunction,AverageAllocatedMb,AverageDuration,Timestamp");
             writer.newLine();
             String line;
             while ((line = reader.readLine()) != null) {
@@ -153,13 +153,12 @@ public class InvocationTraceGenerator {
                 String owner = parts[0];
                 String function = parts[1];
                 String memory = parts[2];
-                String p25duration = parts[3];
-                String p99duration = parts[4];
-                int timestamp = Integer.parseInt(parts[5]);
+                String duration = parts[3];
+                int timestamp = Integer.parseInt(parts[4]);
                 
                 int normalizedTimestamp = timestamp - firstTimestamp;
 
-                writer.write(String.format("%s,%s,%s,%s,%s,%d", owner, function, memory, p25duration, p99duration, normalizedTimestamp));
+                writer.write(String.format("%s,%s,%s,%s,%d", owner, function, memory, duration, normalizedTimestamp));
                 writer.newLine();
             }
         }
@@ -167,6 +166,9 @@ public class InvocationTraceGenerator {
         if (compress) {
             writeMapping(outputFilePath + ".function_mapping", "HashFunction,CompressedHash", FunctionInfoStorage.COMPRESSED_MAPPING);
             writeMapping(outputFilePath + ".owner_mapping", "HashOwner,CompressedHash", compressedOwnerMapping);
+            writeDurationStats(outputFilePath + ".function_durations", "CompressedHash,P50Duration,P99Duration");
+        } else {
+            writeDurationStats(outputFilePath + ".function_durations", "HashFunction,P50Duration,P99Duration");
         }
     }
 
@@ -181,6 +183,25 @@ public class InvocationTraceGenerator {
         }
     }
 
+    private static void writeDurationStats(String path, String header) throws IOException {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(path, false))) {
+            writer.write(header);
+            writer.newLine();
+
+            for (String hash : FunctionInfoStorage.FUNCTIONS_SEEN) {
+                String id = hash;
+                if (FunctionInfoStorage.COMPRESSED_MAPPING.get(hash) != null) {
+                    id = FunctionInfoStorage.COMPRESSED_MAPPING.get(hash).toString();
+                }
+                long p50 = FunctionInfoStorage.P50_DURATIONS.get(hash);
+                long p99 = FunctionInfoStorage.P99_DURATIONS.get(hash);
+
+                writer.write(id  + "," + p50 + "," + p99);
+                writer.newLine();
+            }
+        }
+    }
+
     private static void processFunction(String line, int firstMinute, int lastMinute, BufferedWriter bw) {
         String[] splitRow = line.split(DELIMITER);
         String owner = splitRow[0];
@@ -190,11 +211,12 @@ public class InvocationTraceGenerator {
         String compressedOwnerHash = owner;
 
         /* If there is no record about this function about avg duration or memory, then skip */
-        // TODO: check p25 and p99 instead?
         if (!FunctionInfoStorage.DURATIONS.containsKey(function) || !FunctionInfoStorage.MEMORIES.containsKey(app)) {
             ++skipped;
             return;
         }
+
+        FunctionInfoStorage.FUNCTIONS_SEEN.add(function); // store with non-compressed hash
 
         if (compress) {
             compressedOwnerMapping.computeIfAbsent(owner, k -> compressedOwnerMapping.size());
@@ -204,8 +226,7 @@ public class InvocationTraceGenerator {
         }
 
         int memory = FunctionInfoStorage.MEMORIES.get(app);
-        int p25duration = FunctionInfoStorage.P25_DURATIONS.get(function);
-        int p99duration = FunctionInfoStorage.P99_DURATIONS.get(function);
+        int duration = FunctionInfoStorage.DURATIONS.get(function);
         int currentMinute = firstMinute;
         int invocationCount = 0;
         while (currentMinute <= lastMinute) {
@@ -219,8 +240,7 @@ public class InvocationTraceGenerator {
                     compressedOwnerHash, 
                     compressedFunctionHash, 
                     String.valueOf(memory), 
-                    String.valueOf(p25duration), 
-                    String.valueOf(p99duration),
+                    String.valueOf(duration), 
                     String.valueOf(timestamp)
                 );
                 try {
@@ -287,10 +307,9 @@ public class InvocationTraceGenerator {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] splitRow = line.split(DELIMITER);
-                // We assume P99 duration as the invocation duration, since it is safer for concurrency estimation
-                int p99duration = Integer.parseInt(splitRow[4]);
-                int timestamp = Integer.parseInt(splitRow[5]);
-                int endTimestamp = timestamp + p99duration;
+                int duration = Integer.parseInt(splitRow[3]);
+                int timestamp = Integer.parseInt(splitRow[4]);
+                int endTimestamp = timestamp + duration;
 
                 /* Note: this is REALLY slow */
                 activeInvocationsEndTimes.removeIf(endTime -> timestamp >= endTime);
@@ -375,9 +394,8 @@ public class InvocationTraceGenerator {
             while ((line = reader.readLine()) != null) {
                 String[] splitRow = line.split(DELIMITER);
                 int memory = Integer.parseInt(splitRow[2]);
-                int p25duration = Integer.parseInt(splitRow[3]);
-                int p99duration = Integer.parseInt(splitRow[4]);
-                int timestamp = Integer.parseInt(splitRow[5]);
+                int duration = Integer.parseInt(splitRow[3]);
+                int timestamp = Integer.parseInt(splitRow[4]);
 
                 int currentInvocationTimestamp = timestamp;
 
@@ -385,7 +403,7 @@ public class InvocationTraceGenerator {
                 int currentConsumption = activeInvocations.stream().mapToInt(Invocation::getMemory).sum();
 
                 if (currentConsumption + memory <= maxMemory) {
-                    activeInvocations.add(new Invocation(splitRow[0], splitRow[1], memory, p25duration, p99duration, timestamp));
+                    activeInvocations.add(new Invocation(splitRow[0], splitRow[1], memory, duration, timestamp));
                     writer.write(line);
                     writer.newLine();
                 } /* else: skip writing */
