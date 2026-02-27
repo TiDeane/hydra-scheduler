@@ -21,7 +21,7 @@ public abstract class UtilityCalculator {
   protected final boolean USE_SNAPSHOT;
 
   /* Key - function */
-  protected final Map<String, FunctionInfo> functions;
+  protected final Map<String, FunctionUtilityInfo> functions;
   
   public final HashSet<String> optimizedFunctionsAOT;
   public final HashSet<String> optimizedFunctionsSnapshot;
@@ -61,7 +61,7 @@ public abstract class UtilityCalculator {
       return;
     }
     if (!functions.containsKey(function)) {
-      functions.put(function, new FunctionInfo(function, memory, duration));
+      functions.put(function, new FunctionUtilityInfo(function, memory, duration));
     }
     functions.get(function).totalInvocations++;
   }

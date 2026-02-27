@@ -22,10 +22,10 @@ public class NaiveUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    for (FunctionInfo functionInfo : functions.values()) {
-      float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.totalInvocations;
-      float invocationRate = (float) functionInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
-      functionInfo.utility = coldStartRate * invocationRate;
+    for (FunctionUtilityInfo functionUtilityInfo : functions.values()) {
+      float coldStartRate = (float) functionUtilityInfo.totalColdStarts / functionUtilityInfo.totalInvocations;
+      float invocationRate = (float) functionUtilityInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
+      functionUtilityInfo.utility = coldStartRate * invocationRate;
     }
 
     List<String> toOptimize = functions.entrySet().stream()

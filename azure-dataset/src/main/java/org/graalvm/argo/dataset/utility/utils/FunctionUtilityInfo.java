@@ -1,6 +1,6 @@
 package org.graalvm.argo.dataset.utility.utils;
 
-public class FunctionInfo {
+public class FunctionUtilityInfo {
   public String name;
   public int totalInvocations;
   public int totalColdStarts;
@@ -8,7 +8,7 @@ public class FunctionInfo {
   public int duration;
   public float utility;
 
-  public FunctionInfo(String name, int memory, int duration) {
+  public FunctionUtilityInfo(String name, int memory, int duration) {
     this.name = name;
     this.memory = memory;
     this.duration = duration;

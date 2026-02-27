@@ -21,7 +21,7 @@ public class LongestRunningUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    for (FunctionInfo info : functions.values()) {
+    for (FunctionUtilityInfo info : functions.values()) {
       info.utility = info.duration * info.totalInvocations;
     }
 
