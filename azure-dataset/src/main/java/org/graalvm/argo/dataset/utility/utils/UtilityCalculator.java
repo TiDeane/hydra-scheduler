@@ -6,12 +6,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
+import org.graalvm.argo.dataset.utility.Configuration;
+
 public abstract class UtilityCalculator {
-
-  /* how many functions to optimize at a time */
-  protected static final int OPTIMIZATION_AMOUNT = 1000;
-
-  protected static final int MAX_OPTIMIZED = 4000;
 
   /* IMPORTANT: THESE VALUES ARE PLACEHOLDERS */
   protected final float SNAPSHOT_CREATION_OVERHEAD = 150;
@@ -92,11 +89,11 @@ public abstract class UtilityCalculator {
 
   public float getOptimizationCost() {
     if (USE_AOT && USE_SNAPSHOT) {
-      return OPTIMIZATION_AMOUNT / 2 * (SNAPSHOT_CREATION_OVERHEAD + AOT_COMPILATION_OVERHEAD);
+      return Configuration.OPTIMIZATION_AMOUNT / 2 * (SNAPSHOT_CREATION_OVERHEAD + AOT_COMPILATION_LATENCY);
     } else if (USE_AOT) {
-      return OPTIMIZATION_AMOUNT * AOT_COMPILATION_OVERHEAD;
+      return Configuration.OPTIMIZATION_AMOUNT * AOT_COMPILATION_LATENCY;
     } else if (USE_SNAPSHOT) {
-      return OPTIMIZATION_AMOUNT * SNAPSHOT_CREATION_OVERHEAD;
+      return Configuration.OPTIMIZATION_AMOUNT * SNAPSHOT_CREATION_OVERHEAD;
     }
     return 0;
   }

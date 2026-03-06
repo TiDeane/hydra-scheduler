@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.graalvm.argo.dataset.utility.Configuration;
+
 /* Extends on the naive utility calculator to incorporate additional function characteristics */
 // TODO: for now, only considers memory footprint
 public class ExtendedUtilityCalculator extends UtilityCalculator {
@@ -20,12 +22,12 @@ public class ExtendedUtilityCalculator extends UtilityCalculator {
 
   @Override
   public void calculateUtilityAndOptimize(int currentTimestamp) {
-    int toOptimizeCount = OPTIMIZATION_AMOUNT; // new variable
-    if (optimizedFunctionsAOT.size() + optimizedFunctionsSnapshot.size() >= MAX_OPTIMIZED) {
+    int toOptimizeCount = Configuration.OPTIMIZATION_AMOUNT;
+    if (optimizedFunctionsAOT.size() + optimizedFunctionsSnapshot.size() >= Configuration.MAX_OPTIMIZED) {
       super.calculateUtilityAndOptimize(currentTimestamp);
       return;
-    } else if (optimizedFunctionsAOT.size() + optimizedFunctionsSnapshot.size() + OPTIMIZATION_AMOUNT >= MAX_OPTIMIZED) {
-      toOptimizeCount = MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
+    } else if (optimizedFunctionsAOT.size() + optimizedFunctionsSnapshot.size() + Configuration.OPTIMIZATION_AMOUNT >= Configuration.MAX_OPTIMIZED) {
+      toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
     for (FunctionUtilityInfo functionUtilityInfo : functions.values()) {

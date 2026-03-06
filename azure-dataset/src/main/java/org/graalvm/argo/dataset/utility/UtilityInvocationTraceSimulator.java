@@ -22,11 +22,6 @@ import org.graalvm.argo.dataset.utility.utils.UtilityCalculator;
  */
 public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
-    /**
-     * Number of milliseconds between each round of utility calculation and optimization.
-     */
-    private static final int UTILITY_CALCULATION_INTERVAL = 3600000; // 60 minutes
-
     private final String utilityCalculationMethod;
     private final boolean useAOT;
     private final boolean useSnapshotting;
@@ -97,7 +92,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         UtilitySimulationState utilityss = ((UtilitySimulationState)ss);
 
         /* We make use of this function to optimize if the utility calculation interval has passed  */
-        if (utilityss.currentTimestamp - utilityss.utilityCalculator.lastOptimization > UTILITY_CALCULATION_INTERVAL) {
+        if (utilityss.currentTimestamp - utilityss.utilityCalculator.lastOptimization > Configuration.UTILITY_CALCULATION_INTERVAL) {
             utilityss.utilityCalculator.calculateUtilityAndOptimize(utilityss.currentTimestamp);
         }
 
