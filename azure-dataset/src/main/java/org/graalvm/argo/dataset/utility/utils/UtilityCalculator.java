@@ -10,9 +10,13 @@ import org.graalvm.argo.dataset.utility.Configuration;
 
 public abstract class UtilityCalculator {
 
-  /* IMPORTANT: THESE VALUES ARE PLACEHOLDERS */
-  protected final float SNAPSHOT_CREATION_OVERHEAD = 150;
-  protected final float AOT_COMPILATION_OVERHEAD = 60000;
+  // TODO: include optimization "budget" (i.e., how many functions can be optimized at a time)
+  // TODO: this way, we can use Fourier short-term to decide which functions to prioritize
+
+  protected final float SNAPSHOT_CREATION_OVERHEAD = (float) 496.45;
+  protected final float AOT_COMPILATION_LATENCY = 66075;
+  // note: this is peak RSS, not average RSS
+  protected final float AOT_COMPILATION_FOOTPRINT = (float) 2525.625; // currently unused
 
   protected final boolean USE_AOT;
   protected final boolean USE_SNAPSHOT;

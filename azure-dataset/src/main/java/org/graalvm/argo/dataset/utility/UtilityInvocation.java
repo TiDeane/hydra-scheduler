@@ -12,10 +12,10 @@ public class UtilityInvocation extends Invocation {
 
     private boolean optimized;
     private OptimizationType optimizationType;
-    private static final double OPTIMIZED_AOT_FOOTPRINT_RATIO = 0.375;
-    private static final double OPTIMIZED_AOT_DURATION_RATIO = 0.015; // Native Image paper: based on Figure 9 values
-    private static final double OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO = 0.22; // REAP paper: 61%-96% reduction, so we choose 79%. Only applies to cold executions
-    private static final double SNAPSHOT_RESTORE_PENALTY = 30.15; // from local measurements
+    private static final double OPTIMIZED_AOT_FOOTPRINT_RATIO = 0.235;
+    private static final double OPTIMIZED_AOT_DURATION_RATIO = 0.773;
+    private static final double OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO = 0.284;
+    private static final double SNAPSHOT_RESTORE_PENALTY = 33.2;
 
     public UtilityInvocation(String owner, String function, int memory, int duration, int timestamp) {
         super(owner, function, memory, duration, timestamp);
