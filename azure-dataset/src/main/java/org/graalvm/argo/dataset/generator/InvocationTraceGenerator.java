@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -146,16 +148,20 @@ public class InvocationTraceGenerator {
         }
 
         if (compress) {
-            writeMapping(outputFilePath + ".function_mapping", "HashFunction,CompressedHash", FunctionInfoStorage.COMPRESSED_MAPPING);
-            writeMapping(outputFilePath + ".owner_mapping", "HashOwner,CompressedHash", compressedOwnerMapping);
-            writeDurationStats(outputFilePath + ".function_durations", "CompressedHash,P50Duration,P99Duration");
+            writeMapping(outputFilePath, "function_mapping.csv", "HashFunction,CompressedHash", FunctionInfoStorage.COMPRESSED_MAPPING);
+            writeMapping(outputFilePath, "owner_mapping.csv", "HashOwner,CompressedHash", compressedOwnerMapping);
+            writeDurationStats(outputFilePath, "function_durations.csv", "CompressedHash,P50Duration,P99Duration");
         } else {
-            writeDurationStats(outputFilePath + ".function_durations", "HashFunction,P50Duration,P99Duration");
+            writeDurationStats(outputFilePath, "function_durations.csv", "HashFunction,P50Duration,P99Duration");
         }
     }
 
-    private static void writeMapping(String path, String header, Map<String, ?> mapping) throws IOException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(path, false))) {
+    private static void writeMapping(String path, String outputMapping, String header, Map<String, ?> mapping) throws IOException {
+        Path inputPath = Paths.get(path);
+        Path parentDir = inputPath.getParent();
+        File targetFile = (parentDir != null) ? parentDir.resolve(outputMapping).toFile() : new File(outputMapping);
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(targetFile, false))) {
             writer.write(header);
             writer.newLine();
             for (Map.Entry<String, ?> entry : mapping.entrySet()) {
@@ -165,11 +171,14 @@ public class InvocationTraceGenerator {
         }
     }
 
-    private static void writeDurationStats(String path, String header) throws IOException {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(path, false))) {
+    private static void writeDurationStats(String path, String outputMapping, String header) throws IOException {
+        Path inputPath = Paths.get(path);
+        Path parentDir = inputPath.getParent();
+        File targetFile = (parentDir != null) ? parentDir.resolve(outputMapping).toFile() : new File(outputMapping);
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(targetFile, false))) {
             writer.write(header);
             writer.newLine();
-
             for (String hash : FunctionInfoStorage.FUNCTIONS_SEEN) {
                 String id = hash;
                 if (FunctionInfoStorage.COMPRESSED_MAPPING.get(hash) != null) {

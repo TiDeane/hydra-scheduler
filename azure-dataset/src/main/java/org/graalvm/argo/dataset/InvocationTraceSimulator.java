@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -27,10 +28,12 @@ public class InvocationTraceSimulator {
     HashFunction/CompressedHash, P50Duration, P99Duration
      */
     private static void fillDurations(String inputFile) {
-        String statsFilePath = inputFile + ".function_durations";
-        File statsFile = new File(statsFilePath);
+        Path inputPath = Paths.get(inputFile);
+        Path parentDir = inputPath.getParent();
+        File statsFile = (parentDir != null) ? parentDir.resolve("function_durations.csv").toFile() : new File("function_durations.csv");
 
         if (!statsFile.exists()) {
+            System.err.println("Duration stats file not found, defaulting to P99");
             return;
         }
         
