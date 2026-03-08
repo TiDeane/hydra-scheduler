@@ -1,5 +1,5 @@
 
-package org.graalvm.argo.dataset.utility.utils;
+package org.graalvm.argo.dataset.utility.calculator;
 
 import java.util.HashSet;
 import java.util.List;

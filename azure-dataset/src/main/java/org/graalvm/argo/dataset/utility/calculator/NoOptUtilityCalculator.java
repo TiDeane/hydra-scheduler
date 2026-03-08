@@ -1,4 +1,4 @@
-package org.graalvm.argo.dataset.utility.utils;
+package org.graalvm.argo.dataset.utility.calculator;
 
 import java.util.ArrayList;
 import java.util.Collections;

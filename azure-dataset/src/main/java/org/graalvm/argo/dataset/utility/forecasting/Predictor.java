@@ -1,4 +1,4 @@
-package org.graalvm.argo.dataset.utility;
+package org.graalvm.argo.dataset.utility.forecasting;
 
 import java.util.Arrays;
 import java.util.Comparator;

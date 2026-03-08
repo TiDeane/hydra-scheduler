@@ -6,6 +6,7 @@ public class UtilityOutputEntry extends OutputEntry {
 
     public int optimizedColdStarts;
     protected int runningOptimizedFunctions;
+    public float optimizationCost;
 
     @Override
     public String toString() {

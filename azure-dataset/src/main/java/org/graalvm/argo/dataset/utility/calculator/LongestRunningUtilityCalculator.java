@@ -1,4 +1,4 @@
-package org.graalvm.argo.dataset.utility.utils;
+package org.graalvm.argo.dataset.utility.calculator;
 
 import java.util.List;
 import java.util.Map;
@@ -6,14 +6,13 @@ import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.utility.Configuration;
 
-/* Prioritizes optimizing the functions with the highest expected number of cold starts */
-public class NaiveUtilityCalculator extends UtilityCalculator {
+/* Prioritizes optimizing the functions with the highest aggregate execution duration */
+public class LongestRunningUtilityCalculator extends UtilityCalculator {
 
-  public NaiveUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
+  public LongestRunningUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
     super(useAOT, useSnapshotting);
   }
   
-  /* Note: this is very inefficient and can probably be optimized */
   @Override
   public void calculateUtilityAndOptimize(int currentTimestamp) {
     int toOptimizeCount = Configuration.OPTIMIZATION_AMOUNT;
@@ -24,18 +23,16 @@ public class NaiveUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    for (FunctionUtilityInfo functionUtilityInfo : functions.values()) {
-      float coldStartRate = (float) functionUtilityInfo.totalColdStarts / functionUtilityInfo.totalInvocations;
-      float invocationRate = (float) functionUtilityInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
-      functionUtilityInfo.utility = coldStartRate * invocationRate;
+    for (FunctionUtilityInfo info : functions.values()) {
+      info.utility = info.duration * info.totalInvocations;
     }
 
     List<String> toOptimize = functions.entrySet().stream()
-            .sorted((e1, e2) -> Float.compare(e2.getValue().utility, e1.getValue().utility))
+            .sorted((e1, e2) -> Float.compare(e2.getValue().duration, e1.getValue().duration))
             .limit(toOptimizeCount)
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
-    
+
     if (USE_AOT && USE_SNAPSHOT) {
       int midpoint = toOptimize.size() / 2;
       List<String> aotPart = toOptimize.subList(0, midpoint);

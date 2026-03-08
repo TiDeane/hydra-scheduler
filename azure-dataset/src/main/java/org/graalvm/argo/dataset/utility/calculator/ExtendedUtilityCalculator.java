@@ -1,4 +1,4 @@
-package org.graalvm.argo.dataset.utility.utils;
+package org.graalvm.argo.dataset.utility.calculator;
 
 import java.util.List;
 import java.util.Map;
@@ -6,13 +6,20 @@ import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.utility.Configuration;
 
-/* Prioritizes optimizing the functions with the highest aggregate execution duration */
-public class LongestRunningUtilityCalculator extends UtilityCalculator {
+/* Extends on the naive utility calculator to incorporate additional function characteristics */
+// TODO: for now, only considers memory footprint
+public class ExtendedUtilityCalculator extends UtilityCalculator {
 
-  public LongestRunningUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
+  public ExtendedUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
     super(useAOT, useSnapshotting);
   }
   
+  /* Currently, only divides the expected number of cold starts by the memory footprint */
+  /* This makes sense for snapshotting, but not for AOT. For AOT, we should divide by code size */
+  /* Dividing by code size can only be done once we map functions to benchmarks */
+
+  // TODO: later, calculate differently for AOT and snapshotting
+
   @Override
   public void calculateUtilityAndOptimize(int currentTimestamp) {
     int toOptimizeCount = Configuration.OPTIMIZATION_AMOUNT;
@@ -23,16 +30,19 @@ public class LongestRunningUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    for (FunctionUtilityInfo info : functions.values()) {
-      info.utility = info.duration * info.totalInvocations;
+    for (FunctionUtilityInfo functionUtilityInfo : functions.values()) {
+      int memory = functionUtilityInfo.memory;
+      float coldStartRate = (float) functionUtilityInfo.totalColdStarts / functionUtilityInfo.totalInvocations;
+      float invocationRate = (float) functionUtilityInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
+      functionUtilityInfo.utility = (coldStartRate * invocationRate) / memory;
     }
 
     List<String> toOptimize = functions.entrySet().stream()
-            .sorted((e1, e2) -> Float.compare(e2.getValue().duration, e1.getValue().duration))
+            .sorted((e1, e2) -> Float.compare(e2.getValue().utility, e1.getValue().utility))
             .limit(toOptimizeCount)
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
-
+    
     if (USE_AOT && USE_SNAPSHOT) {
       int midpoint = toOptimize.size() / 2;
       List<String> aotPart = toOptimize.subList(0, midpoint);

@@ -9,12 +9,12 @@ import org.graalvm.argo.dataset.Invocation;
 import org.graalvm.argo.dataset.InvocationTraceSimulator;
 import org.graalvm.argo.dataset.OutputEntry;
 import org.graalvm.argo.dataset.SimulationState;
-import org.graalvm.argo.dataset.utility.utils.NaiveUtilityCalculator;
-import org.graalvm.argo.dataset.utility.utils.RandomUtilityCalculator;
-import org.graalvm.argo.dataset.utility.utils.ExtendedUtilityCalculator;
-import org.graalvm.argo.dataset.utility.utils.LongestRunningUtilityCalculator;
-import org.graalvm.argo.dataset.utility.utils.NoOptUtilityCalculator;
-import org.graalvm.argo.dataset.utility.utils.UtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.NaiveUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.RandomUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.ExtendedUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.LongestRunningUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.NoOptUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.UtilityCalculator;
 
 /**
  * This class is an extension of InvocationTraceSimulator that also
@@ -66,7 +66,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
                 	this.utilityCalculator = new NoOptUtilityCalculator(useAOT, useSnapshotting);
                 	break;
                 default:
-                    this.utilityCalculator = new NaiveUtilityCalculator(useAOT, useSnapshotting);
+                    this.utilityCalculator = new NoOptUtilityCalculator(useAOT, useSnapshotting);
             }
         }
     }
@@ -77,6 +77,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         List<UtilityInvocation> runningUtilityInvocations = (List<UtilityInvocation>)(List<?>) runningInvocations;
         UtilityOutputEntry utilityOutputEntry = new UtilityOutputEntry();
         utilityOutputEntry.optimizedColdStarts = ((UtilitySimulationState)ss).optimizedColdStarts;
+        utilityOutputEntry.optimizationCost = ((UtilitySimulationState)ss).optimizationCost;
         utilityOutputEntry.runningOptimizedFunctions  = (int) runningUtilityInvocations.parallelStream().filter(UtilityInvocation::isOptimized).map(UtilityInvocation::getFunction).distinct().count();
         return super.updateStatistics(activeInvocations, runningInvocations, utilityOutputEntry, ss);
     }
@@ -84,12 +85,16 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     @Override
     protected void resetSimulationStateAfterUpdateStatistics(SimulationState ss) {
         ((UtilitySimulationState)ss).optimizedColdStarts = 0;
+        ((UtilitySimulationState)ss).optimizationCost = 0;
         super.resetSimulationStateAfterUpdateStatistics(ss);
     }
 
     @Override
     protected void updateAfterWarmCheck(SimulationState ss, Invocation currentInvocation, Invocation warm) {
         UtilitySimulationState utilityss = ((UtilitySimulationState)ss);
+
+        // TODO: only optimize functions within budget. Check optimization interval. Sum simulation state optimization cost based on how many were optimized
+        // TODO: add to optimization cost
 
         /* We make use of this function to optimize if the utility calculation interval has passed  */
         if (utilityss.currentTimestamp - utilityss.utilityCalculator.lastOptimization > Configuration.UTILITY_CALCULATION_INTERVAL) {

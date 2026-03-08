@@ -1,4 +1,4 @@
-package org.graalvm.argo.dataset.utility.utils;
+package org.graalvm.argo.dataset.utility.calculator;
 
 public class FunctionUtilityInfo {
   public String name;

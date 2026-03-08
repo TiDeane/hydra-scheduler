@@ -1,4 +1,4 @@
-package org.graalvm.argo.dataset.utility.utils;
+package org.graalvm.argo.dataset.utility.calculator;
 
 import java.util.List;
 import java.util.Map;
@@ -6,20 +6,14 @@ import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.utility.Configuration;
 
-/* Extends on the naive utility calculator to incorporate additional function characteristics */
-// TODO: for now, only considers memory footprint
-public class ExtendedUtilityCalculator extends UtilityCalculator {
+/* Prioritizes optimizing the functions with the highest expected number of cold starts */
+public class NaiveUtilityCalculator extends UtilityCalculator {
 
-  public ExtendedUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
+  public NaiveUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
     super(useAOT, useSnapshotting);
   }
   
-  /* Currently, only divides the expected number of cold starts by the memory footprint */
-  /* This makes sense for snapshotting, but not for AOT. For AOT, we should divide by code size */
-  /* Dividing by code size can only be done once we map functions to benchmarks */
-
-  // TODO: later, calculate differently for AOT and snapshotting
-
+  /* Note: this is very inefficient and can probably be optimized */
   @Override
   public void calculateUtilityAndOptimize(int currentTimestamp) {
     int toOptimizeCount = Configuration.OPTIMIZATION_AMOUNT;
@@ -31,10 +25,9 @@ public class ExtendedUtilityCalculator extends UtilityCalculator {
     }
 
     for (FunctionUtilityInfo functionUtilityInfo : functions.values()) {
-      int memory = functionUtilityInfo.memory;
       float coldStartRate = (float) functionUtilityInfo.totalColdStarts / functionUtilityInfo.totalInvocations;
       float invocationRate = (float) functionUtilityInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
-      functionUtilityInfo.utility = (coldStartRate * invocationRate) / memory;
+      functionUtilityInfo.utility = coldStartRate * invocationRate;
     }
 
     List<String> toOptimize = functions.entrySet().stream()
