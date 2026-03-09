@@ -1,11 +1,19 @@
 package org.graalvm.argo.dataset;
 
-import org.apache.commons.cli.*;
 import org.graalvm.argo.dataset.aot.AOTInvocationTraceSimulator;
 import org.graalvm.argo.dataset.utility.UtilityInvocationTraceSimulator;
 import org.graalvm.argo.dataset.utility.UtilityOutputEntry;
 import org.graalvm.argo.dataset.aot.AOTOutputEntry;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.List;
 
 public class SimulatorEntryPoint {
@@ -27,7 +35,7 @@ public class SimulatorEntryPoint {
 
             InvocationTraceSimulator simulator;
             if (!utility.equals("none")) {
-                simulator = new UtilityInvocationTraceSimulator(utility, useAOT, useSnapshot);
+                simulator = new UtilityInvocationTraceSimulator(inputfile, utility, useAOT, useSnapshot);
             } else {
                 if (useAOT) {
                     simulator = new AOTInvocationTraceSimulator();
@@ -36,24 +44,8 @@ public class SimulatorEntryPoint {
                 }
             }
             List<OutputEntry> output = simulator.simulate(inputfile, keepalive, SAMPLE_INTERVAL);
-
-            int totalColdStarts = 0;
-            long totalDuration = 0;
-            long totalFootprint = 0;
-            int totalOptimizedColdStarts = 0;
-            
-            for (OutputEntry entry : output) {
-                totalColdStarts += entry.coldStarts;
-                totalDuration += entry.totalDuration;
-                totalFootprint += entry.totalFootprint;
-                if (entry instanceof UtilityOutputEntry) {
-                    totalOptimizedColdStarts += ((UtilityOutputEntry) entry).optimizedColdStarts;
-                } else if (entry instanceof AOTOutputEntry) {
-                    totalOptimizedColdStarts += ((AOTOutputEntry) entry).optimizedColdStarts;
-                }
-                System.out.println(entry);
-            }
-            System.out.println("Total cold starts: " + totalColdStarts + "\nTotal duration: " + totalDuration + "\nTotal footprint: " + totalFootprint + "\nTotal optimized cold starts: " + totalOptimizedColdStarts);
+            // TODO: write total compilation cost
+            processOutput(output, keepalive, utility, useAOT, useSnapshot, inputfile);
         } catch (ParseException e) {
             System.err.println(e.getMessage());
             new HelpFormatter().printHelp("utility-name", options);
@@ -78,5 +70,45 @@ public class SimulatorEntryPoint {
         snapshot.setRequired(false);
         options.addOption(snapshot);
         return options;
+    }
+
+    private static void processOutput(List<OutputEntry> output, int keepalive, String utility, boolean useAOT, boolean useSnapshot, String filePath) {
+        String outputFilePath = filePath + "." + utility + ".output";
+        System.out.println("Saving output to " + outputFilePath);
+
+        int totalColdStarts = 0;
+        long totalDuration = 0;
+        long totalFootprint = 0;
+        int totalOptimizedColdStarts = 0;
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath))) {
+            for (OutputEntry entry : output) {
+                totalColdStarts += entry.coldStarts;
+                totalDuration += entry.totalDuration;
+                totalFootprint += entry.totalFootprint;
+                
+                if (entry instanceof UtilityOutputEntry) {
+                    totalOptimizedColdStarts += ((UtilityOutputEntry) entry).optimizedColdStarts;
+                } else if (entry instanceof AOTOutputEntry) {
+                    totalOptimizedColdStarts += ((AOTOutputEntry) entry).optimizedColdStarts;
+                }
+                
+                writer.write(entry.toString());
+                writer.newLine();
+            }
+            
+            writer.write("Utility: " + utility + ", keepalive: " + keepalive + ", useAOT: " + useAOT + ", useSnapshot: " + useSnapshot);
+            writer.newLine();
+
+            writer.write("Total cold starts: " + totalColdStarts);
+            writer.newLine();
+            writer.write("Total duration: " + totalDuration);
+            writer.newLine();
+            writer.write("Total footprint: " + totalFootprint);
+            writer.newLine();
+            writer.write("Total optimized cold starts: " + totalOptimizedColdStarts);
+            // TODO: write total optimization cost
+        } catch (IOException e) {
+            System.err.println("Error writing to output file: " + e.getMessage());
+        }
     }
 }
