@@ -103,7 +103,13 @@ public class Predictor {
         fullSignal[t] = restored[t] + slope * t;
     }
 
-    return fullSignal;
+    double[] forecastOnly = new double[horizon];
+    for (int i = 0; i < horizon; i++) {
+      int t = n + i; // Index on the full timeline
+      double value = restored[t] + (slope * t);
+      forecastOnly[i] = Math.max(0.0, value);
+    }
+    return forecastOnly;
   }
 
   public static double[] fourierExtrapolationPredict(int[] train, int horizon) {
