@@ -105,8 +105,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         /* Run optimization rounds until the functions marked for utility calculation have been optimized */
         if (currentTimestamp - utilityss.utilityCalculator.lastOptimizationRound >= Configuration.OPTIMIZATION_INTERVAL) {
             if (!utilityss.utilityCalculator.optimizationQueue.isEmpty()) {
-                utilityss.utilityCalculator.runOptimizationRound(currentTimestamp);
-                // TODO: update simulation state optimization cost
+                utilityss.optimizationCost += utilityss.utilityCalculator.runOptimizationRound(currentTimestamp);
                 System.err.println("Total optimized functions: " + (utilityss.utilityCalculator.optimizedFunctionsAOT.size() + utilityss.utilityCalculator.optimizedFunctionsSnapshot.size()));
             }
             utilityss.utilityCalculator.lastOptimizationRound = currentTimestamp;

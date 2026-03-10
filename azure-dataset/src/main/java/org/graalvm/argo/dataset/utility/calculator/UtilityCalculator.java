@@ -14,10 +14,9 @@ import org.graalvm.argo.dataset.utility.forecasting.ForecastProvider.ForecastEnt
 
 public abstract class UtilityCalculator {
 
-  protected final float SNAPSHOT_CREATION_OVERHEAD = (float) 496.45;
-  protected final float AOT_COMPILATION_LATENCY = 66075;
-  // note: this is peak RSS, not average RSS
-  protected final float AOT_COMPILATION_FOOTPRINT = (float) 2525.625; // currently unused
+  protected final float SNAPSHOT_CREATION_OVERHEAD = (float) 496.45; // milliseconds
+  protected final float AOT_COMPILATION_LATENCY = 66075; // milliseconds
+  protected final float AOT_COMPILATION_FOOTPRINT = (float) 2525.63; // peak RSS (MB), currently unused
 
   protected final boolean USE_AOT;
   protected final boolean USE_SNAPSHOT;
@@ -35,12 +34,13 @@ public abstract class UtilityCalculator {
   /* Used to calculate averages or rates, when combined with the current timestamp */
   public int startTimestamp;
 
+  /* When both snapshotting and AOT are enabled, this is used to alternate between them when optimizing */
+  private boolean nextIsAOT;
+
   /* Used to decide when to mark functions for optimization */
   public int lastUtilityCalculation;
   /* Used to decide when to start a new optimization round for marked functions */
   public int lastOptimizationRound;
-  /* Total seconds used optimizing functions (creating snapshots or AOT-compiling) */
-  public int totalOptimizationCost;
 
   public UtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
     try {
@@ -59,9 +59,9 @@ public abstract class UtilityCalculator {
     this.optimizedFunctionsSnapshot = new HashSet<>();
     this.optimizationQueue = new HashSet<>();
 
+    this.nextIsAOT = true;
     this.lastUtilityCalculation = 0;
     this.lastOptimizationRound = 0;
-    this.totalOptimizationCost = 0;
   }
 
   public boolean optimizedAOT(String function) {
@@ -95,30 +95,31 @@ public abstract class UtilityCalculator {
     functions.get(function).totalColdStarts++;
   }
 
-  protected void applyAOT(String function) {
+  protected float applyAOT(String function) {
     optimizedFunctionsAOT.add(function);
     functions.remove(function);
-    this.totalOptimizationCost += AOT_COMPILATION_LATENCY;
+    return AOT_COMPILATION_LATENCY;
   }
 
-  protected void applySnapshot(String function) {
+  protected float applySnapshot(String function) {
     optimizedFunctionsSnapshot.add(function);
     functions.remove(function);
-    this.totalOptimizationCost += SNAPSHOT_CREATION_OVERHEAD;
+    return SNAPSHOT_CREATION_OVERHEAD;
   }
 
-  protected void optimize(String function) {
-    boolean nextIsAOT = true;
-
+  /* Optimizes a function, returns the optimization cost */
+  protected float optimize(String function) {
     if (USE_AOT && USE_SNAPSHOT) {
       // apply AOT and snapshotting alternating
-      if (nextIsAOT) applyAOT(function);
-      else applySnapshot(function);
       nextIsAOT = !nextIsAOT;
+      if (nextIsAOT) return applyAOT(function);
+      else return applySnapshot(function);
     } else if (USE_AOT) {
-      applyAOT(function);
+      return applyAOT(function);
     } else if (USE_SNAPSHOT) {
-      applySnapshot(function);
+      return applySnapshot(function);
+    } else {
+      return 0;
     }
   }
 
@@ -129,20 +130,21 @@ public abstract class UtilityCalculator {
     this.lastOptimizationRound = currentTimestamp - Configuration.OPTIMIZATION_INTERVAL;
   }
 
-  public void runOptimizationRound(int currentTimestamp) {
+  public float runOptimizationRound(int currentTimestamp) {
     try {
       PriorityQueue<ForecastEntry> hotFunctions = null;
       if (forecastProvider != null) {
         hotFunctions = forecastProvider.getRelevantForecast(currentTimestamp, optimizationQueue);
       }
 
+      float optimizationCost = 0;
       int budgetRemaining = Configuration.OPTIMIZATION_BUDGET;
 
       // Optimize functions with highest expected imminent invocations
       if (hotFunctions != null) {
-        while (!hotFunctions.isEmpty() && budgetRemaining > 0) {
+        while (!hotFunctions.isEmpty() && budgetRemaining > 0 && !optimizationQueue.isEmpty()) {
           ForecastEntry entry = hotFunctions.poll();
-          optimize(entry.function());
+          optimizationCost += optimize(entry.function());
           optimizationQueue.remove(entry.function());
           budgetRemaining--;
         }
@@ -153,15 +155,17 @@ public abstract class UtilityCalculator {
         Iterator<String> iter = optimizationQueue.iterator();
         while (iter.hasNext() && budgetRemaining > 0) {
           String function = iter.next();
-          optimize(function);
+          optimizationCost += optimize(function);
           iter.remove();
           budgetRemaining--;
         }
       }
 
       this.lastOptimizationRound = currentTimestamp;
+      return optimizationCost / 1000; // convert to seconds
     } catch (IOException ioe) {
       ioe.printStackTrace();
+      return 0;
     }
   }
 }

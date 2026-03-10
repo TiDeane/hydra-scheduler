@@ -33,7 +33,7 @@ public class InvocationTraceSimulator {
         File statsFile = (parentDir != null) ? parentDir.resolve("function_durations.csv").toFile() : new File("function_durations.csv");
 
         if (!statsFile.exists()) {
-            System.err.println("Duration stats file not found, defaulting to P99");
+            System.err.println("Duration stats file not found, defaulting to average duration for all invocations");
             return;
         }
         

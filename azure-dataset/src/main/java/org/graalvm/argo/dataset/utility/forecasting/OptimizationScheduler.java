@@ -126,7 +126,6 @@ public class OptimizationScheduler {
       }
     } catch (Exception e) {
       e.printStackTrace();
-      System.err.println("deleting file " +outputFilePath);
       new File(outputFilePath).delete();
       System.exit(1);
     }

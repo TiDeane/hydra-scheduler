@@ -80,6 +80,7 @@ public class SimulatorEntryPoint {
         long totalDuration = 0;
         long totalFootprint = 0;
         int totalOptimizedColdStarts = 0;
+        float totalOptimizationCost = 0;
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputFilePath))) {
             for (OutputEntry entry : output) {
                 totalColdStarts += entry.coldStarts;
@@ -88,6 +89,7 @@ public class SimulatorEntryPoint {
                 
                 if (entry instanceof UtilityOutputEntry) {
                     totalOptimizedColdStarts += ((UtilityOutputEntry) entry).optimizedColdStarts;
+                    totalOptimizationCost += ((UtilityOutputEntry) entry).optimizationCost;
                 } else if (entry instanceof AOTOutputEntry) {
                     totalOptimizedColdStarts += ((AOTOutputEntry) entry).optimizedColdStarts;
                 }
@@ -106,7 +108,8 @@ public class SimulatorEntryPoint {
             writer.write("Total footprint: " + totalFootprint);
             writer.newLine();
             writer.write("Total optimized cold starts: " + totalOptimizedColdStarts);
-            // TODO: write total optimization cost
+            writer.newLine();
+            writer.write("Total optimization cost: " + totalOptimizationCost);
         } catch (IOException e) {
             System.err.println("Error writing to output file: " + e.getMessage());
         }
