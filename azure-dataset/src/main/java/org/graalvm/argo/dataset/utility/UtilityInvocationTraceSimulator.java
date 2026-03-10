@@ -1,5 +1,6 @@
 package org.graalvm.argo.dataset.utility;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.TreeSet;
@@ -22,11 +23,13 @@ import org.graalvm.argo.dataset.utility.calculator.UtilityCalculator;
  */
 public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
+    private final String inputFilePath;
     private final String utilityCalculationMethod;
     private final boolean useAOT;
     private final boolean useSnapshotting;
 
-    public UtilityInvocationTraceSimulator(String utilityCalculationMethod, boolean useAOT, boolean useSnapshotting) {
+    public UtilityInvocationTraceSimulator(String inputFilePath, String utilityCalculationMethod, boolean useAOT, boolean useSnapshotting) {
+        this.inputFilePath = inputFilePath;
         this.utilityCalculationMethod = utilityCalculationMethod;
         this.useAOT = useAOT;
         this.useSnapshotting = useSnapshotting;
@@ -51,22 +54,22 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
             this.optimizedColdStarts = 0;
             switch (utilityCalculationMethod) {
                 case "naive":
-                    this.utilityCalculator = new NaiveUtilityCalculator(useAOT, useSnapshotting);
+                    this.utilityCalculator = new NaiveUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
                     break;
                 case "extended":
-                    this.utilityCalculator = new ExtendedUtilityCalculator(useAOT, useSnapshotting);
+                    this.utilityCalculator = new ExtendedUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
                     break;
                 case "longest-running":
-                    this.utilityCalculator = new LongestRunningUtilityCalculator(useAOT, useSnapshotting);
+                    this.utilityCalculator = new LongestRunningUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
                     break;
                 case "random":
-                	this.utilityCalculator = new RandomUtilityCalculator(useAOT, useSnapshotting);
+                	this.utilityCalculator = new RandomUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
                 	break;
                 case "no-opt":
-                	this.utilityCalculator = new NoOptUtilityCalculator(useAOT, useSnapshotting);
+                	this.utilityCalculator = new NoOptUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
                 	break;
                 default:
-                    this.utilityCalculator = new NoOptUtilityCalculator(useAOT, useSnapshotting);
+                    this.utilityCalculator = new NoOptUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
             }
         }
     }
@@ -92,13 +95,21 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     @Override
     protected void updateAfterWarmCheck(SimulationState ss, Invocation currentInvocation, Invocation warm) {
         UtilitySimulationState utilityss = ((UtilitySimulationState)ss);
+        int currentTimestamp = utilityss.currentTimestamp;
 
-        // TODO: only optimize functions within budget. Check optimization interval. Sum simulation state optimization cost based on how many were optimized
-        // TODO: add to optimization cost
+        /* We make use of this function to perform utility calculation and optimization */
+        if (currentTimestamp - utilityss.utilityCalculator.lastUtilityCalculation > Configuration.UTILITY_CALCULATION_INTERVAL) {
+            utilityss.utilityCalculator.calculateUtilityScores(currentTimestamp);
+        }
 
-        /* We make use of this function to optimize if the utility calculation interval has passed  */
-        if (utilityss.currentTimestamp - utilityss.utilityCalculator.lastOptimization > Configuration.UTILITY_CALCULATION_INTERVAL) {
-            utilityss.utilityCalculator.calculateUtilityAndOptimize(utilityss.currentTimestamp);
+        /* Run optimization rounds until the functions marked for utility calculation have been optimized */
+        if (currentTimestamp - utilityss.utilityCalculator.lastOptimizationRound >= Configuration.OPTIMIZATION_INTERVAL) {
+            if (!utilityss.utilityCalculator.optimizationQueue.isEmpty()) {
+                utilityss.utilityCalculator.runOptimizationRound(currentTimestamp);
+                // TODO: update simulation state optimization cost
+                System.err.println("Total optimized functions: " + (utilityss.utilityCalculator.optimizedFunctionsAOT.size() + utilityss.utilityCalculator.optimizedFunctionsSnapshot.size()));
+            }
+            utilityss.utilityCalculator.lastOptimizationRound = currentTimestamp;
         }
 
         UtilityInvocation currentUtilityInvocation = (UtilityInvocation) currentInvocation;

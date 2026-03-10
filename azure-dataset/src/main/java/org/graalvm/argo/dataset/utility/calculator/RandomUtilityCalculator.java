@@ -12,15 +12,15 @@ import org.graalvm.argo.dataset.utility.Configuration;
 /* Randomly selects functions to optimize */
 public class RandomUtilityCalculator extends UtilityCalculator {
 
-  public RandomUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
-    super(useAOT, useSnapshotting);
+  public RandomUtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
+    super(inputFilePath, useAOT, useSnapshotting);
   }
   
   @Override
-  public void calculateUtilityAndOptimize(int currentTimestamp) {
+  public void calculateUtilityScores(int currentTimestamp) {
     int toOptimizeCount = Configuration.OPTIMIZATION_AMOUNT;
     if (optimizedFunctionsAOT.size() + optimizedFunctionsSnapshot.size() >= Configuration.MAX_OPTIMIZED) {
-      super.calculateUtilityAndOptimize(currentTimestamp);
+      super.calculateUtilityScores(currentTimestamp);
       return;
     } else if (optimizedFunctionsAOT.size() + optimizedFunctionsSnapshot.size() + Configuration.OPTIMIZATION_AMOUNT >= Configuration.MAX_OPTIMIZED) {
       toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
@@ -33,19 +33,8 @@ public class RandomUtilityCalculator extends UtilityCalculator {
             .limit(toOptimizeCount)
             .collect(Collectors.toList());
     
-    if (USE_AOT && USE_SNAPSHOT) {
-      // half of the functions are AOT-optimized, the other half are snapshot-optimized
-      int midpoint = toOptimize.size() / 2;
-      List<String> aotPart = toOptimize.subList(0, midpoint);
-      List<String> snapshotPart = toOptimize.subList(midpoint, toOptimize.size());
-      aotPart.forEach(this::applyAOT);
-      snapshotPart.forEach(this::applySnapshot);
-    } else if (USE_AOT) {
-      toOptimize.forEach(this::applyAOT);
-    } else if (USE_SNAPSHOT) {
-      toOptimize.forEach(this::applySnapshot);
-    }
+    this.optimizationQueue.addAll(toOptimize);
 
-    super.calculateUtilityAndOptimize(currentTimestamp);
+    super.calculateUtilityScores(currentTimestamp);
   }
 }

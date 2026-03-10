@@ -10,12 +10,12 @@ import java.util.stream.Collectors;
 /* Doesn't optimize any functions */
 public class NoOptUtilityCalculator extends UtilityCalculator {
 
-  public NoOptUtilityCalculator(boolean useAOT, boolean useSnapshotting) {
-    super(useAOT, useSnapshotting);
+  public NoOptUtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
+    super(inputFilePath, useAOT, useSnapshotting);
   }
   
   @Override
-  public void calculateUtilityAndOptimize(int currentTimestamp) {
-    super.calculateUtilityAndOptimize(currentTimestamp);
+  public void calculateUtilityScores(int currentTimestamp) {
+    super.calculateUtilityScores(currentTimestamp);
   }
 }
