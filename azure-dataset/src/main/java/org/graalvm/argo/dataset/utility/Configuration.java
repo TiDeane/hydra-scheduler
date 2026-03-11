@@ -10,7 +10,7 @@ public class Configuration {
   /* How many functions we mark for optimization at each utility calculation interval */
   public static final int OPTIMIZATION_AMOUNT = 1000;
   /* How many functions can be optimized at a time */
-  public static final int OPTIMIZATION_BUDGET = 500;
+  public static final int OPTIMIZATION_BUDGET = 200;
   /* Number of milliseconds between each round of applying optimizations */
   public static final int OPTIMIZATION_INTERVAL = 600000; // 10 minutes
 }

@@ -44,7 +44,6 @@ public class SimulatorEntryPoint {
                 }
             }
             List<OutputEntry> output = simulator.simulate(inputfile, keepalive, SAMPLE_INTERVAL);
-            // TODO: write total compilation cost
             processOutput(output, keepalive, utility, useAOT, useSnapshot, inputfile);
         } catch (ParseException e) {
             System.err.println(e.getMessage());

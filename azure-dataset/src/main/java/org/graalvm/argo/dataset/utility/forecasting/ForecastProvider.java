@@ -37,7 +37,11 @@ public class ForecastProvider {
     if (currentTimestamp < nextBlockTimestamp) return null;
 
     // highest invocation count at the top
-    PriorityQueue<ForecastEntry> pq = new PriorityQueue<>((a, b) -> Integer.compare(b.imminentInvocations(), a.imminentInvocations()));
+    PriorityQueue<ForecastEntry> pq = new PriorityQueue<>((a, b) -> {
+      int cmp = Integer.compare(b.imminentInvocations(), a.imminentInvocations());
+      if (cmp != 0) return cmp;
+      return a.function().compareTo(b.function()); // stable tiebreaker
+    });
     
     String line;
     while ((line = reader.readLine()) != null) {

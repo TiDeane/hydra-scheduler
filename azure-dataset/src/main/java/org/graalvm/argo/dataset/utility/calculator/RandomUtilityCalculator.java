@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.utility.Configuration;
@@ -27,7 +28,7 @@ public class RandomUtilityCalculator extends UtilityCalculator {
     }
 
     List<String> candidates = new ArrayList<>(functions.keySet());
-    Collections.shuffle(candidates);
+    Collections.shuffle(candidates, new Random(42));
 
     List<String> toOptimize = candidates.stream()
             .limit(toOptimizeCount)
