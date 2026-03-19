@@ -7,9 +7,9 @@ import java.util.stream.Collectors;
 import org.graalvm.argo.dataset.utility.Configuration;
 
 /* Prioritizes optimizing the functions with the highest expected number of cold starts */
-public class NaiveUtilityCalculator extends UtilityCalculator {
+public class ColdStartUtilityCalculator extends UtilityCalculator {
 
-  public NaiveUtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
+  public ColdStartUtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
     super(inputFilePath, useAOT, useSnapshotting);
   }
   

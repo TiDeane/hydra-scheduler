@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.utility.Configuration;
 
-/* Extends on the naive utility calculator to incorporate additional function characteristics */
+/* Extends on the cold-start utility calculator to incorporate additional function characteristics */
 // TODO: for now, only considers memory footprint
 public class ExtendedUtilityCalculator extends UtilityCalculator {
 

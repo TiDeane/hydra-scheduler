@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.utility.Configuration;
 
-/* Prioritizes optimizing the functions with the highest aggregate execution duration */
+/* Prioritizes optimizing the functions with the highest execution duration */
 public class LongestRunningUtilityCalculator extends UtilityCalculator {
 
   public LongestRunningUtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
@@ -24,11 +24,13 @@ public class LongestRunningUtilityCalculator extends UtilityCalculator {
     }
 
     for (FunctionUtilityInfo info : functions.values()) {
-      info.utility = info.duration * info.totalInvocations;
+      float coldStartRate = (float) info.totalColdStarts / info.totalInvocations;
+      float invocationRate = (float) info.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
+      info.utility = coldStartRate * invocationRate * info.duration; // achieves the lowest total footprint and total duration
     }
 
     List<String> toOptimize = functions.entrySet().stream()
-            .sorted((e1, e2) -> Float.compare(e2.getValue().duration, e1.getValue().duration))
+            .sorted((e1, e2) -> Float.compare(e2.getValue().utility, e1.getValue().utility))
             .limit(toOptimizeCount)
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
