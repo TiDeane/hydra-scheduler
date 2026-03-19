@@ -1,16 +1,14 @@
 package org.graalvm.argo.dataset.utility;
 
-import java.io.IOException;
-import java.util.LinkedList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.Invocation;
 import org.graalvm.argo.dataset.InvocationTraceSimulator;
 import org.graalvm.argo.dataset.OutputEntry;
 import org.graalvm.argo.dataset.SimulationState;
-import org.graalvm.argo.dataset.utility.calculator.NaiveUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.ColdStartUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.RandomUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.ExtendedUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.LongestRunningUtilityCalculator;
@@ -47,14 +45,15 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
     class UtilitySimulationState extends SimulationState {
         int optimizedColdStarts;
+        int optimizedSlaViolations;
+        HashSet<String> optimizedSlaViolationFunctions = new HashSet<>();
         float optimizationCost;
         UtilityCalculator utilityCalculator;
 
         public UtilitySimulationState() {
-            this.optimizedColdStarts = 0;
             switch (utilityCalculationMethod) {
-                case "naive":
-                    this.utilityCalculator = new NaiveUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
+                case "cold-start":
+                    this.utilityCalculator = new ColdStartUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
                     break;
                 case "extended":
                     this.utilityCalculator = new ExtendedUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
@@ -80,6 +79,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         List<UtilityInvocation> runningUtilityInvocations = (List<UtilityInvocation>)(List<?>) runningInvocations;
         UtilityOutputEntry utilityOutputEntry = new UtilityOutputEntry();
         utilityOutputEntry.optimizedColdStarts = ((UtilitySimulationState)ss).optimizedColdStarts;
+        utilityOutputEntry.optimizedSlaViolations = ((UtilitySimulationState)ss).optimizedSlaViolations;
         utilityOutputEntry.optimizationCost = ((UtilitySimulationState)ss).optimizationCost;
         utilityOutputEntry.runningOptimizedFunctions  = (int) runningUtilityInvocations.parallelStream().filter(UtilityInvocation::isOptimized).map(UtilityInvocation::getFunction).distinct().count();
         return super.updateStatistics(activeInvocations, runningInvocations, utilityOutputEntry, ss);
@@ -88,6 +88,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     @Override
     protected void resetSimulationStateAfterUpdateStatistics(SimulationState ss) {
         ((UtilitySimulationState)ss).optimizedColdStarts = 0;
+        ((UtilitySimulationState)ss).optimizedSlaViolations = 0;
         ((UtilitySimulationState)ss).optimizationCost = 0;
         super.resetSimulationStateAfterUpdateStatistics(ss);
     }
@@ -113,7 +114,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
         UtilityInvocation currentUtilityInvocation = (UtilityInvocation) currentInvocation;
         String currentFunction = currentUtilityInvocation.getFunction();
-        utilityss.utilityCalculator.registerInvocation(currentFunction, currentInvocation.getMemory(), currentInvocation.getDuration());
+        utilityss.utilityCalculator.registerInvocation(currentFunction, currentInvocation.getMemory(), currentInvocation.getP99Duration());
         if (warm == null) {
             currentInvocation.setDuration(currentInvocation.getP99Duration());
             currentInvocation.setEndTimestamp(currentInvocation.getDuration());
@@ -124,6 +125,13 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
                     currentUtilityInvocation.optimize("SNAPSHOT");
                 } else {
                     currentUtilityInvocation.optimize("AOT");
+                }
+
+                if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * super.APDEX_FRUSTRATION_THRESHOLD
+                    || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
+                    // SLA violation occurred
+                    utilityss.optimizedSlaViolations++;
+                    utilityss.optimizedSlaViolationFunctions.add(currentInvocation.getFunction());
                 }
             }
             utilityss.utilityCalculator.registerColdStart(currentFunction);

@@ -10,10 +10,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -23,6 +21,9 @@ import java.util.stream.Collectors;
  * users, functions, and invocations that would be active on a real platform.
  */
 public class InvocationTraceSimulator {
+
+    /* We consider an SLA violation to be an invocation with (Duration > P50 * APDEX_FRUSTRATION_THRESHOLD) */
+    protected static final int APDEX_FRUSTRATION_THRESHOLD = 4;
 
     /*
     HashFunction/CompressedHash, P50Duration, P99Duration
@@ -101,6 +102,7 @@ public class InvocationTraceSimulator {
         outputEntry.coldStarts = ss.coldStarts;
         outputEntry.totalDuration = ss.totalDuration;
         outputEntry.totalFootprint = ss.totalFootprint;
+        outputEntry.slaViolations = ss.slaViolations;
         outputEntry.runningUsers = (int) runningInvocations.parallelStream().map(Invocation::getOwner).distinct().count();
         outputEntry.runningFunctions  = (int) runningInvocations.parallelStream().map(Invocation::getFunction).distinct().count();
         outputEntry.runningInvocations = runningInvocations.size();
@@ -119,6 +121,7 @@ public class InvocationTraceSimulator {
         ss.coldStarts = 0;
         ss.totalDuration = 0;
         ss.totalFootprint = 0;
+        ss.slaViolations = 0;
     }
 
     protected void updateAfterWarmCheck(SimulationState ss, Invocation currentInvocation, Invocation warm) {
@@ -197,6 +200,12 @@ public class InvocationTraceSimulator {
         ss.invocationsProcessed++;
         ss.totalDuration += currentInvocation.getDuration() / 1000; // Convert to seconds
         ss.totalFootprint += currentInvocation.getMemory() * currentInvocation.getDuration() / 1000.0; // Convert to MB-seconds
+        if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * APDEX_FRUSTRATION_THRESHOLD
+            || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
+            // SLA violation occured
+            ss.slaViolationFunctions.add(currentInvocation.getFunction());
+            ss.slaViolations++;
+        }
 
         if (ss.currentTimestamp - ss.previousTimestamp > interval) {
             // Calculate and update statistics.
