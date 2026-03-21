@@ -1,5 +1,11 @@
 package org.graalvm.argo.dataset.utility;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.TreeSet;
@@ -11,6 +17,7 @@ import org.graalvm.argo.dataset.SimulationState;
 import org.graalvm.argo.dataset.utility.calculator.ColdStartUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.RandomUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.ExtendedUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.FunctionUtilityInfo;
 import org.graalvm.argo.dataset.utility.calculator.LongestRunningUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.NoOptUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.UtilityCalculator;
@@ -24,13 +31,13 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     private final String inputFilePath;
     private final String utilityCalculationMethod;
     private final boolean useAOT;
-    private final boolean useSnapshotting;
+    private final boolean useSnapshot;
 
-    public UtilityInvocationTraceSimulator(String inputFilePath, String utilityCalculationMethod, boolean useAOT, boolean useSnapshotting) {
+    public UtilityInvocationTraceSimulator(String inputFilePath, String utilityCalculationMethod, boolean useAOT, boolean useSnapshot) {
         this.inputFilePath = inputFilePath;
         this.utilityCalculationMethod = utilityCalculationMethod;
         this.useAOT = useAOT;
-        this.useSnapshotting = useSnapshotting;
+        this.useSnapshot = useSnapshot;
     }
 
     @Override
@@ -53,22 +60,22 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         public UtilitySimulationState() {
             switch (utilityCalculationMethod) {
                 case "cold-start":
-                    this.utilityCalculator = new ColdStartUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
+                    this.utilityCalculator = new ColdStartUtilityCalculator(inputFilePath, useAOT, useSnapshot);
                     break;
                 case "extended":
-                    this.utilityCalculator = new ExtendedUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
+                    this.utilityCalculator = new ExtendedUtilityCalculator(inputFilePath, useAOT, useSnapshot);
                     break;
                 case "longest-running":
-                    this.utilityCalculator = new LongestRunningUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
+                    this.utilityCalculator = new LongestRunningUtilityCalculator(inputFilePath, useAOT, useSnapshot);
                     break;
                 case "random":
-                	this.utilityCalculator = new RandomUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
+                	this.utilityCalculator = new RandomUtilityCalculator(inputFilePath, useAOT, useSnapshot);
                 	break;
                 case "no-opt":
-                	this.utilityCalculator = new NoOptUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
+                	this.utilityCalculator = new NoOptUtilityCalculator(inputFilePath, useAOT, useSnapshot);
                 	break;
                 default:
-                    this.utilityCalculator = new NoOptUtilityCalculator(inputFilePath, useAOT, useSnapshotting);
+                    this.utilityCalculator = new NoOptUtilityCalculator(inputFilePath, useAOT, useSnapshot);
             }
         }
     }
@@ -144,6 +151,57 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     }
 
     protected List<OutputEntry> simulateInvocations(String inputFile, int keepalive, int interval) {
-        return simulateInvocations(inputFile, new UtilitySimulationState(), keepalive, interval);
+        UtilitySimulationState utilityss = new UtilitySimulationState();
+        List<OutputEntry> output = simulateInvocations(inputFile, utilityss, keepalive, interval);
+        writeCdfData(inputFile, utilityss);
+        return output;
+    }
+
+    private void writeCdfData(String inputFile, UtilitySimulationState utilityss) {
+        File input = new File(inputFile);
+        String parentDir = input.getParent();
+        String inputFileName = input.getName().replace(".csv", "");
+
+        String folderName = String.format("m%d_oa%d_ob%d_uci%d_oi%d",
+                Configuration.MAX_OPTIMIZED,
+                Configuration.OPTIMIZATION_AMOUNT,
+                Configuration.OPTIMIZATION_BUDGET,
+                Configuration.UTILITY_CALCULATION_INTERVAL / 60000,
+                Configuration.OPTIMIZATION_INTERVAL / 60000
+        );
+
+        Path targetDirPath = Paths.get(parentDir, folderName);
+
+        String configStr = "baseline";
+        if (useAOT && useSnapshot) configStr = "aot.snapshot";
+        else if (useAOT) configStr = "aot";
+        else if (useSnapshot) configStr = "snapshot";
+
+        // Format: [trace]_[utility]_[config]_cdf_data.csv
+        String cdfFileName = String.format("%s_%s_%s_cdf_data.csv", inputFileName, utilityCalculationMethod, configStr);
+        
+        File cdfFile = targetDirPath.resolve(cdfFileName).toFile();
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(cdfFile))) {
+            writer.write("function,total_invocations,sla_violations,violation_rate");
+            writer.newLine();
+
+            for (FunctionUtilityInfo function : utilityss.utilityCalculator.functions.values()) {
+                double violationRate = 0.0;
+                if (function.totalInvocations > 0) {
+                    violationRate = (double) function.totalSlaViolations / function.totalInvocations;
+                }
+
+                writer.write(String.format("%s,%d,%d,%.6f", 
+                    function.name, 
+                    function.totalInvocations, 
+                    function.totalSlaViolations, 
+                    violationRate
+                ));
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing CDF data to " + cdfFile.getAbsolutePath() + ": " + e.getMessage());
+        }
     }
 }
