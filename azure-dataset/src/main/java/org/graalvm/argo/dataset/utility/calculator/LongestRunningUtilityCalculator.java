@@ -23,10 +23,11 @@ public class LongestRunningUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    for (FunctionUtilityInfo info : functions.values()) {
-      float coldStartRate = (float) info.totalColdStarts / info.totalInvocations;
-      float invocationRate = (float) info.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
-      info.utility = coldStartRate * invocationRate * info.duration; // achieves the lowest total footprint and total duration
+    for (String function : unoptimizedFunctions) {
+      FunctionUtilityInfo functionInfo = functions.get(function);
+      float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.totalInvocations;
+      float invocationRate = (float) functionInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
+      functionInfo.utility = coldStartRate * invocationRate * functionInfo.duration; // achieves the lowest total footprint and total duration
     }
 
     List<String> toOptimize = functions.entrySet().stream()

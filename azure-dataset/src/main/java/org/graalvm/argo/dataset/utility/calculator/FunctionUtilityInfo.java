@@ -4,6 +4,7 @@ public class FunctionUtilityInfo {
   public String name;
   public int totalInvocations;
   public int totalColdStarts;
+  public int totalSlaViolations;
   public int memory;
   public int duration;
   public float utility;
@@ -14,6 +15,7 @@ public class FunctionUtilityInfo {
     this.duration = duration;
     this.totalInvocations = 0;
     this.totalColdStarts = 0;
+    this.totalSlaViolations = 0;
     this.utility = 0;
   }
 }

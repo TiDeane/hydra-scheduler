@@ -2,8 +2,6 @@ package org.graalvm.argo.dataset.utility.calculator;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -27,7 +25,7 @@ public class RandomUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    List<String> candidates = new ArrayList<>(functions.keySet());
+    List<String> candidates = new ArrayList<>(unoptimizedFunctions);
     Collections.shuffle(candidates, new Random(42));
 
     List<String> toOptimize = candidates.stream()

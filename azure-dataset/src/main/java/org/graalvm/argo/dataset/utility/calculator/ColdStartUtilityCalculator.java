@@ -24,10 +24,11 @@ public class ColdStartUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    for (FunctionUtilityInfo functionUtilityInfo : functions.values()) {
-      float coldStartRate = (float) functionUtilityInfo.totalColdStarts / functionUtilityInfo.totalInvocations;
-      float invocationRate = (float) functionUtilityInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
-      functionUtilityInfo.utility = coldStartRate * invocationRate;
+    for (String function : unoptimizedFunctions) {
+      FunctionUtilityInfo functionInfo = functions.get(function);
+      float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.totalInvocations;
+      float invocationRate = (float) functionInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
+      functionInfo.utility = coldStartRate * invocationRate;
     }
 
     List<String> toOptimize = functions.entrySet().stream()

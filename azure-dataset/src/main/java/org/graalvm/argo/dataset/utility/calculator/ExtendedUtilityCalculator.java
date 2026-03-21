@@ -30,11 +30,12 @@ public class ExtendedUtilityCalculator extends UtilityCalculator {
       toOptimizeCount = Configuration.MAX_OPTIMIZED - optimizedFunctionsAOT.size() - optimizedFunctionsSnapshot.size();
     }
 
-    for (FunctionUtilityInfo functionUtilityInfo : functions.values()) {
-      int memory = functionUtilityInfo.memory;
-      float coldStartRate = (float) functionUtilityInfo.totalColdStarts / functionUtilityInfo.totalInvocations;
-      float invocationRate = (float) functionUtilityInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
-      functionUtilityInfo.utility = (coldStartRate * invocationRate) / memory;
+    for (String function : unoptimizedFunctions) {
+      FunctionUtilityInfo functionInfo = functions.get(function);
+      int memory = functionInfo.memory;
+      float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.totalInvocations;
+      float invocationRate = (float) functionInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
+      functionInfo.utility = (coldStartRate * invocationRate) / memory;
     }
 
     List<String> toOptimize = functions.entrySet().stream()

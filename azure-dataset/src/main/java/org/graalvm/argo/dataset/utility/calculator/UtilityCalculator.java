@@ -22,12 +22,13 @@ public abstract class UtilityCalculator {
   protected final boolean USE_SNAPSHOT;
 
   /* Key - function */
-  protected final Map<String, FunctionUtilityInfo> functions;
+  public final Map<String, FunctionUtilityInfo> functions;
   
+  public final HashSet<String> unoptimizedFunctions;
   public final HashSet<String> optimizedFunctionsAOT;
   public final HashSet<String> optimizedFunctionsSnapshot;
 
-  public final HashSet<String> optimizationQueue;
+  public final HashSet<String> optimizationQueue; // TODO: this name is misleading
 
   private ForecastProvider forecastProvider;
 
@@ -55,6 +56,7 @@ public abstract class UtilityCalculator {
     this.USE_AOT = useAOT;
     this.USE_SNAPSHOT = useSnapshotting;
     this.functions = new HashMap<>();
+    this.unoptimizedFunctions = new HashSet<>();
     this.optimizedFunctionsAOT = new HashSet<>();
     this.optimizedFunctionsSnapshot = new HashSet<>();
     this.optimizationQueue = new HashSet<>();
@@ -77,33 +79,34 @@ public abstract class UtilityCalculator {
   }
 
   public void registerInvocation(String function, int memory, int duration) {
-    if (optimizedFunctionsAOT.contains(function) || optimizedFunctionsSnapshot.contains(function)) {
-      // We return because this information is stored only to decide which functions to optimize, and the function is already optimized
-      return;
-    }
     if (!functions.containsKey(function)) {
-      functions.put(function, new FunctionUtilityInfo(function, memory, duration));
+      // First invocation
+      FunctionUtilityInfo functionInfo = new FunctionUtilityInfo(function, memory, duration);
+      unoptimizedFunctions.add(function);
+      functions.put(function, functionInfo);
     }
     functions.get(function).totalInvocations++;
   }
 
   public void registerColdStart(String function) {
-    if (optimizedFunctionsAOT.contains(function) || optimizedFunctionsSnapshot.contains(function)) {
-      // We return because this information is stored only to decide which functions to optimize, and the function is already optimized
-      return;
-    }
     functions.get(function).totalColdStarts++;
+  }
+
+  public void registerSlaViolations(String function) {
+    functions.get(function).totalSlaViolations++;
   }
 
   protected float applyAOT(String function) {
     optimizedFunctionsAOT.add(function);
-    functions.remove(function);
+    unoptimizedFunctions.remove(function);
+    functions.get(function).utility = -1;
     return AOT_COMPILATION_LATENCY;
   }
 
   protected float applySnapshot(String function) {
     optimizedFunctionsSnapshot.add(function);
-    functions.remove(function);
+    unoptimizedFunctions.remove(function);
+    functions.get(function).utility = -1;
     return SNAPSHOT_CREATION_OVERHEAD;
   }
 
