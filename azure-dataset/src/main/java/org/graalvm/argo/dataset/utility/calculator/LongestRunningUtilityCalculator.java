@@ -27,7 +27,7 @@ public class LongestRunningUtilityCalculator extends UtilityCalculator {
       FunctionUtilityInfo functionInfo = functions.get(function);
       float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.totalInvocations;
       float invocationRate = (float) functionInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
-      functionInfo.utility = coldStartRate * invocationRate * functionInfo.duration; // achieves the lowest total footprint and total duration
+      functionInfo.utility = coldStartRate * invocationRate * functionInfo.p99duration; // achieves the lowest total footprint and total duration
     }
 
     List<String> toOptimize = functions.entrySet().stream()

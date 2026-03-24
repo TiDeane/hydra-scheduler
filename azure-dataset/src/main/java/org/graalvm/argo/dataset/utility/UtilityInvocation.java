@@ -41,12 +41,11 @@ public class UtilityInvocation extends Invocation {
         if (optimizationType.equals("SNAPSHOT")) {
             this.optimizationType = OptimizationType.SNAPSHOT;
             memory = (int) ((double) memory * OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO);
-            // note: should we use p50 or p75 for snapshotting? Since snapshot-restored executions are slower than normal warm starts
             duration = (int) ((double) p50duration + SNAPSHOT_RESTORE_PENALTY);
         } else {
             this.optimizationType = OptimizationType.AOT;
             memory = (int) ((double) memory * OPTIMIZED_AOT_FOOTPRINT_RATIO);
-            duration = (int) ((double) duration * OPTIMIZED_AOT_DURATION_RATIO);
+            duration = (int) ((double) p99duration * OPTIMIZED_AOT_DURATION_RATIO);
         }
         optimized = true;
     }

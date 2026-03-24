@@ -17,6 +17,12 @@ public abstract class UtilityCalculator {
   protected final float SNAPSHOT_CREATION_OVERHEAD = (float) 496.45; // milliseconds
   protected final float AOT_COMPILATION_LATENCY = 66075; // milliseconds
   protected final float AOT_COMPILATION_FOOTPRINT = (float) 2525.63; // peak RSS (MB), currently unused
+  
+  // TODO: this is also present in UtilityInvocation, maybe store it in Configuration?
+  private static final double OPTIMIZED_AOT_FOOTPRINT_RATIO = 0.235;
+  private static final double OPTIMIZED_AOT_DURATION_RATIO = 0.773;
+  private static final double OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO = 0.284;
+  private static final double SNAPSHOT_RESTORE_PENALTY = 33.2;
 
   protected final boolean USE_AOT;
   protected final boolean USE_SNAPSHOT;
@@ -34,10 +40,6 @@ public abstract class UtilityCalculator {
 
   /* Used to calculate averages or rates, when combined with the current timestamp */
   public int startTimestamp;
-
-  /* When both snapshotting and AOT are enabled, this is used to alternate between them when optimizing */
-  private boolean nextIsAOT;
-
   /* Used to decide when to mark functions for optimization */
   public int lastUtilityCalculation;
   /* Used to decide when to start a new optimization round for marked functions */
@@ -61,7 +63,6 @@ public abstract class UtilityCalculator {
     this.optimizedFunctionsSnapshot = new HashSet<>();
     this.optimizationQueue = new HashSet<>();
 
-    this.nextIsAOT = true;
     this.lastUtilityCalculation = 0;
     this.lastOptimizationRound = 0;
   }
@@ -78,10 +79,10 @@ public abstract class UtilityCalculator {
     return optimizedAOT(function) || optimizedSnapshot(function);
   }
 
-  public void registerInvocation(String function, int memory, int duration) {
+  public void registerInvocation(String function, int memory, int p50duration, int p99duration) {
     if (!functions.containsKey(function)) {
       // First invocation
-      FunctionUtilityInfo functionInfo = new FunctionUtilityInfo(function, memory, duration);
+      FunctionUtilityInfo functionInfo = new FunctionUtilityInfo(function, memory, p50duration, p99duration);
       unoptimizedFunctions.add(function);
       functions.put(function, functionInfo);
     }
@@ -113,10 +114,12 @@ public abstract class UtilityCalculator {
   /* Optimizes a function, returns the optimization cost */
   protected float optimize(String function) {
     if (USE_AOT && USE_SNAPSHOT) {
-      // apply AOT and snapshotting alternating
-      nextIsAOT = !nextIsAOT;
-      if (nextIsAOT) return applyAOT(function);
-      else return applySnapshot(function);
+      String optimization = getBestOptimization(function);
+      if (optimization.equals("AOT")) {
+        return applyAOT(function);
+      } else {
+        return applySnapshot(function);
+      }
     } else if (USE_AOT) {
       return applyAOT(function);
     } else if (USE_SNAPSHOT) {
@@ -124,6 +127,31 @@ public abstract class UtilityCalculator {
     } else {
       return 0;
     }
+  }
+
+  protected String getBestOptimization(String function) {
+    FunctionUtilityInfo functionInfo = functions.get(function);
+    int p50duration = functionInfo.p50duration;
+    int p99duration = functionInfo.p99duration;
+    int memory = functionInfo.memory;
+
+    int threshold = Math.max(p50duration * 4, 4);
+    int dur_snapshot = (int) (p50duration + SNAPSHOT_RESTORE_PENALTY);
+    int dur_aot = (int) (p99duration * OPTIMIZED_AOT_DURATION_RATIO);
+
+    boolean snapshot_cures = dur_snapshot <= threshold;
+    boolean aot_cures = dur_aot <= threshold;
+
+    // prioritize "curing" SLA violation
+    if (snapshot_cures && !aot_cures) return "SNAPSHOT";
+    if (aot_cures && !snapshot_cures) return "AOT";
+
+    // tie-breaker: choose the one with the lower footprint
+    int footprint_snapshot = (int) (dur_snapshot * (memory * OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO));
+    int footprint_aot = (int) (dur_aot * (memory * OPTIMIZED_AOT_FOOTPRINT_RATIO));
+    
+    if (footprint_aot < footprint_snapshot) return "AOT";
+    else return "SNAPSHOT";
   }
 
   /* This method is overriden by every subclass based on their utility calculation strategy */

@@ -114,6 +114,8 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         if (currentTimestamp - utilityss.utilityCalculator.lastOptimizationRound >= Configuration.OPTIMIZATION_INTERVAL) {
             if (!utilityss.utilityCalculator.optimizationQueue.isEmpty()) {
                 utilityss.optimizationCost += utilityss.utilityCalculator.runOptimizationRound(currentTimestamp);
+                System.err.println("Total AOT-optimized functions: " + utilityss.utilityCalculator.optimizedFunctionsAOT.size());
+                System.err.println("Total Snapshot-optimized functions: " + utilityss.utilityCalculator.optimizedFunctionsSnapshot.size());
                 System.err.println("Total optimized functions: " + (utilityss.utilityCalculator.optimizedFunctionsAOT.size() + utilityss.utilityCalculator.optimizedFunctionsSnapshot.size()));
             }
             utilityss.utilityCalculator.lastOptimizationRound = currentTimestamp;
@@ -121,8 +123,10 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
         UtilityInvocation currentUtilityInvocation = (UtilityInvocation) currentInvocation;
         String currentFunction = currentUtilityInvocation.getFunction();
-        utilityss.utilityCalculator.registerInvocation(currentFunction, currentInvocation.getMemory(), currentInvocation.getP99Duration());
+        utilityss.utilityCalculator.registerInvocation(currentFunction, currentInvocation.getMemory(), currentInvocation.getP50Duration(), currentInvocation.getP99Duration());
         if (warm == null) {
+            ss.coldStarts++;
+
             currentInvocation.setDuration(currentInvocation.getP99Duration());
             currentInvocation.setEndTimestamp(currentInvocation.getDuration());
             if (utilityss.utilityCalculator.optimized(currentFunction)) {
@@ -136,18 +140,27 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
                 if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * super.APDEX_FRUSTRATION_THRESHOLD
                     || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
-                    // SLA violation occurred
+                    // Optimized SLA violation occurred
                     utilityss.optimizedSlaViolations++;
-                    utilityss.optimizedSlaViolationFunctions.add(currentInvocation.getFunction());
+                    utilityss.optimizedSlaViolationFunctions.add(currentInvocation.getFunction()); // currently unused
                 }
             }
             utilityss.utilityCalculator.registerColdStart(currentFunction);
         } else {
             // Reuse memory and optimization status of the warm invocation instead of always using unoptimized.
             currentUtilityInvocation.setOptimizedMemory((UtilityInvocation) warm);
-            // duration for warm starts is set to P50 in the superclass
+
+            currentInvocation.setDuration(currentInvocation.getP50Duration());
+            currentInvocation.setEndTimestamp(currentInvocation.getP50Duration());
+            ss.activeInvocations.remove(warm);
         }
-        super.updateAfterWarmCheck(ss, currentInvocation, warm);
+
+        // we have to check SLA violations here to register with the utility calculator
+        if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * super.APDEX_FRUSTRATION_THRESHOLD
+            || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
+            // SLA violation occurred
+            utilityss.utilityCalculator.registerSlaViolations(currentFunction);
+        }
     }
 
     protected List<OutputEntry> simulateInvocations(String inputFile, int keepalive, int interval) {
