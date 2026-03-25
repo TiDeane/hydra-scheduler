@@ -12,6 +12,7 @@ public class UtilityInvocation extends Invocation {
 
     private boolean optimized;
     private OptimizationType optimizationType;
+    // TODO: this is repeated in the UtilityCalculator, maybe store elsewhere
     private static final double OPTIMIZED_AOT_FOOTPRINT_RATIO = 0.235;
     private static final double OPTIMIZED_AOT_DURATION_RATIO = 0.773;
     private static final double OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO = 0.284;

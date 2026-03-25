@@ -1,6 +1,5 @@
 package org.graalvm.argo.dataset.utility.forecasting;
 
-import org.graalvm.argo.dataset.utility.forecasting.Predictor;
 import org.graalvm.argo.dataset.utility.Configuration;
 
 import org.apache.commons.cli.CommandLine;
@@ -16,13 +15,11 @@ import java.io.BufferedWriter;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -206,7 +203,7 @@ public class OptimizationScheduler {
   }
 
   /*
-   * Reads lines in bulk via ByteBuffer, replaces RandomAccessFile.readLine() (byte-by-byte)
+   * Reads lines in bulk via ByteBuffer
   */
   private static Map<String, int[]> buildTimeSeries(FileChannel ch, long startOffset, long endOffset, int forecastTime) throws IOException {
     Map<String, int[]> timeSeriesMap = new HashMap<>();
