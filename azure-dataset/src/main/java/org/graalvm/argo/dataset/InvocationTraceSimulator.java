@@ -103,6 +103,7 @@ public class InvocationTraceSimulator {
         outputEntry.totalDuration = ss.totalDuration;
         outputEntry.totalFootprint = ss.totalFootprint;
         outputEntry.slaViolations = ss.slaViolations;
+        outputEntry.slaViolationsCost = ss.slaViolationsCost;
         outputEntry.runningUsers = (int) runningInvocations.parallelStream().map(Invocation::getOwner).distinct().count();
         outputEntry.runningFunctions  = (int) runningInvocations.parallelStream().map(Invocation::getFunction).distinct().count();
         outputEntry.runningInvocations = runningInvocations.size();
@@ -122,6 +123,7 @@ public class InvocationTraceSimulator {
         ss.totalDuration = 0;
         ss.totalFootprint = 0;
         ss.slaViolations = 0;
+        ss.slaViolationsCost = 0;
     }
 
     protected void updateAfterWarmCheck(SimulationState ss, Invocation currentInvocation, Invocation warm) {
@@ -198,13 +200,17 @@ public class InvocationTraceSimulator {
         // Add invocation to array of active invocations.
         ss.activeInvocations.add(currentInvocation);
         ss.invocationsProcessed++;
+
         ss.totalDuration += currentInvocation.getDuration() / 1000; // Convert to seconds
-        ss.totalFootprint += currentInvocation.getMemory() * currentInvocation.getDuration() / 1000.0; // Convert to MB-seconds
+        int invocationFootprint = (currentInvocation.getMemory() * currentInvocation.getDuration()) / 1000; // Convert to MB-seconds
+        ss.totalFootprint += invocationFootprint;
+
         if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * APDEX_FRUSTRATION_THRESHOLD
             || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
             // SLA violation occured
-            ss.slaViolationFunctions.add(currentInvocation.getFunction());
             ss.slaViolations++;
+            ss.slaViolationFunctions.add(currentInvocation.getFunction()); // currently unused
+            ss.slaViolationsCost += invocationFootprint;
         }
 
         if (ss.currentTimestamp - ss.previousTimestamp > interval) {

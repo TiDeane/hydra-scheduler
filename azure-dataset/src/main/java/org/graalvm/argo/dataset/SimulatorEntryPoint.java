@@ -83,6 +83,7 @@ public class SimulatorEntryPoint {
         int totalColdStarts = 0;
         long totalDuration = 0;
         long totalFootprint = 0;
+        long totalSlaViolationsCost = 0;
         int totalOptimizedColdStarts = 0;
         int totalOptimizedSlaViolations = 0;
         float totalOptimizationCost = 0;
@@ -92,6 +93,7 @@ public class SimulatorEntryPoint {
                 totalColdStarts += entry.coldStarts;
                 totalDuration += entry.totalDuration;
                 totalFootprint += entry.totalFootprint;
+                totalSlaViolationsCost += entry.slaViolationsCost;
                 totalSlaViolations += entry.slaViolations;
                 
                 if (entry instanceof UtilityOutputEntry) {
@@ -102,8 +104,7 @@ public class SimulatorEntryPoint {
                     totalOptimizedColdStarts += ((AOTOutputEntry) entry).optimizedColdStarts;
                 }
                 
-                writer.write(entry.toString());
-                writer.newLine();
+                //System.out.println(entry.toString());
             }
             
             writer.write("Utility: " + utility + ", keepalive: " + keepalive + ", useAOT: " + useAOT + ", useSnapshot: " + useSnapshot);
@@ -116,14 +117,17 @@ public class SimulatorEntryPoint {
             writer.write("Total footprint: " + totalFootprint);
             writer.newLine();
             writer.write("Total SLA violations: " + totalSlaViolations);
-            // TODO: include number of functions that suffered SLA violations
+            writer.newLine();
+            // TODO: maybe include number of functions that suffered SLA violations?
+            writer.write("Total SLA violation cost: " + totalSlaViolationsCost);
             writer.newLine();
             writer.write("Total optimized cold starts: " + totalOptimizedColdStarts);
             writer.newLine();
+            writer.write("Total optimized SLA violations: " + totalOptimizedSlaViolations);
+            writer.newLine();
+            // TODO: maybe include number of optimized functions that suffered SLA violations?
             writer.write("Total optimization cost: " + totalOptimizationCost);
             writer.newLine();
-            writer.write("Total optimized SLA violations: " + totalOptimizedSlaViolations);
-            // TODO: include number of optimized functions that suffered SLA violations
         } catch (IOException e) {
             System.err.println("Error writing to output file: " + e.getMessage());
         }

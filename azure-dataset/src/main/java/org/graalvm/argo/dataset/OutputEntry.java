@@ -14,6 +14,8 @@ public class OutputEntry {
     protected int totalFootprint;
     // Total number of SLA violations (Duration > P50 * APDEX_FRUSTRATION_RATIO)
     protected int slaViolations;
+    // Total cost of SLA violations (the provider pays for the full footprint cost of invocations that suffer SLA violations)
+    protected int slaViolationsCost;
     // Current number of users, functions, invocations, and invocation footprint (MBs).
     protected int runningUsers;
     protected int runningFunctions;
@@ -26,7 +28,7 @@ public class OutputEntry {
 
     @Override
     public String toString() {
-        return String.format("time %s | invocations %s cold %s | running users %s functions %s invocations %s footprint %s | cached users %s functions %s footprint %s | total_duration %s total_footprint %s | SLA_violations %s",
+        return String.format("time %s | invocations %s cold %s | running users %s functions %s invocations %s footprint %s | cached users %s functions %s footprint %s | total_duration %s total_footprint %s | SLA_violations %s SLA_violations_cost %s",
                 timestamp,
                 invocationsProcessed,
                 coldStarts,
@@ -39,6 +41,7 @@ public class OutputEntry {
                 cachedInvocationsFootprint,
                 totalDuration,
                 totalFootprint,
-                slaViolations);
+                slaViolations,
+                slaViolationsCost);
     }
 }

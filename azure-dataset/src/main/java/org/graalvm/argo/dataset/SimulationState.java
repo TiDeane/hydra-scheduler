@@ -14,9 +14,10 @@ public class SimulationState {
     public int coldStarts;
     public int totalDuration;
     public int totalFootprint;
-
-    public final HashSet<String> slaViolationFunctions = new HashSet<>();
     public int slaViolations;
+    public int slaViolationsCost; // when an SLA violation occurs, the providers fully pay for the invocation's footprint costs
+    
+    public final HashSet<String> slaViolationFunctions = new HashSet<>();
 
     public List<Invocation> runningInvocations() {
         return activeInvocations.parallelStream().filter(i -> i.getEndTimestamp() > currentTimestamp).collect(Collectors.toList());
