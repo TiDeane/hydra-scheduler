@@ -26,8 +26,8 @@ public class ColdStartUtilityCalculator extends UtilityCalculator {
 
     for (String function : unoptimizedFunctions) {
       FunctionUtilityInfo functionInfo = functions.get(function);
-      float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.totalInvocations;
-      float invocationRate = (float) functionInfo.totalInvocations / (currentTimestamp - startTimestamp) * 1000;
+      float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.invocationsBeforeOpt;
+      float invocationRate = (float) functionInfo.invocationsBeforeOpt / (currentTimestamp - startTimestamp) * 1000;
       functionInfo.utility = coldStartRate * invocationRate;
     }
 

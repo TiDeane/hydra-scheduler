@@ -86,7 +86,12 @@ public abstract class UtilityCalculator {
       unoptimizedFunctions.add(function);
       functions.put(function, functionInfo);
     }
-    functions.get(function).totalInvocations++;
+
+    if (functions.get(function).isOptimized) {
+      functions.get(function).invocationsAfterOpt++;
+    } else {
+      functions.get(function).invocationsBeforeOpt++;
+    }
   }
 
   public void registerColdStart(String function) {
@@ -94,7 +99,11 @@ public abstract class UtilityCalculator {
   }
 
   public void registerSlaViolations(String function) {
-    functions.get(function).totalSlaViolations++;
+    if (functions.get(function).isOptimized) {
+      functions.get(function).slaViolationsAfterOpt++;
+    } else {
+      functions.get(function).slaViolationsBeforeOpt++;
+    }
   }
 
   protected float applyAOT(String function) {
@@ -113,6 +122,7 @@ public abstract class UtilityCalculator {
 
   /* Optimizes a function, returns the optimization cost */
   protected float optimize(String function) {
+    functions.get(function).isOptimized = true;
     if (USE_AOT && USE_SNAPSHOT) {
       String optimization = getBestOptimization(function);
       if (optimization.equals("AOT")) {

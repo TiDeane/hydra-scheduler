@@ -19,6 +19,8 @@ import org.graalvm.argo.dataset.utility.calculator.RandomUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.ExtendedUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.FunctionUtilityInfo;
 import org.graalvm.argo.dataset.utility.calculator.LongestRunningUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.SlaUtilityCalculator;
+import org.graalvm.argo.dataset.utility.calculator.AllRounderUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.NoOptUtilityCalculator;
 import org.graalvm.argo.dataset.utility.calculator.UtilityCalculator;
 
@@ -68,6 +70,12 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
                 case "longest-running":
                     this.utilityCalculator = new LongestRunningUtilityCalculator(inputFilePath, useAOT, useSnapshot);
                     break;
+                case "sla-violation":
+                	this.utilityCalculator = new SlaUtilityCalculator(inputFilePath, useAOT, useSnapshot);
+                	break;
+                case "all-rounder":
+                	this.utilityCalculator = new AllRounderUtilityCalculator(inputFilePath, useAOT, useSnapshot);
+                	break;
                 case "random":
                 	this.utilityCalculator = new RandomUtilityCalculator(inputFilePath, useAOT, useSnapshot);
                 	break;
@@ -196,20 +204,16 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         File cdfFile = targetDirPath.resolve(cdfFileName).toFile();
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(cdfFile))) {
-            writer.write("function,total_invocations,sla_violations,violation_rate");
+            writer.write("functionHash,invocationsBeforeOpt,slaViolationsBeforeOpt,invocationsAfterOpt,slaViolationsAfterOpt");
             writer.newLine();
 
             for (FunctionUtilityInfo function : utilityss.utilityCalculator.functions.values()) {
-                double violationRate = 0.0;
-                if (function.totalInvocations > 0) {
-                    violationRate = (double) function.totalSlaViolations / function.totalInvocations;
-                }
-
-                writer.write(String.format("%s,%d,%d,%.6f", 
+                writer.write(String.format("%s,%d,%d,%d,%d", 
                     function.name, 
-                    function.totalInvocations, 
-                    function.totalSlaViolations, 
-                    violationRate
+                    function.invocationsBeforeOpt, 
+                    function.slaViolationsBeforeOpt,
+                    function.invocationsAfterOpt,
+                    function.slaViolationsAfterOpt
                 ));
                 writer.newLine();
             }

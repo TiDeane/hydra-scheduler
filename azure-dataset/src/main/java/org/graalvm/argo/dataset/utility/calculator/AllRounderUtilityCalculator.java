@@ -6,10 +6,10 @@ import java.util.stream.Collectors;
 
 import org.graalvm.argo.dataset.utility.Configuration;
 
-/* Prioritizes optimizing the functions with the highest cold start duration */
-public class LongestRunningUtilityCalculator extends UtilityCalculator {
+/* Prioritizes optimizing functions based on cold start rate, SLA violation rate, and P99 duration */
+public class AllRounderUtilityCalculator extends UtilityCalculator {
 
-  public LongestRunningUtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
+  public AllRounderUtilityCalculator(String inputFilePath, boolean useAOT, boolean useSnapshotting) {
     super(inputFilePath, useAOT, useSnapshotting);
   }
   
@@ -26,8 +26,9 @@ public class LongestRunningUtilityCalculator extends UtilityCalculator {
     for (String function : unoptimizedFunctions) {
       FunctionUtilityInfo functionInfo = functions.get(function);
       float coldStartRate = (float) functionInfo.totalColdStarts / functionInfo.invocationsBeforeOpt;
+      float slaViolationRate = (float) functionInfo.slaViolationsBeforeOpt / functionInfo.invocationsBeforeOpt;
       float invocationRate = (float) functionInfo.invocationsBeforeOpt / (currentTimestamp - startTimestamp) * 1000;
-      functionInfo.utility = coldStartRate * invocationRate * functionInfo.p99duration; // achieves the lowest total footprint and total duration
+      functionInfo.utility = coldStartRate * invocationRate * slaViolationRate * functionInfo.p99duration;
     }
 
     List<String> toOptimize = functions.entrySet().stream()
