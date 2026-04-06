@@ -9,7 +9,7 @@ warnings.filterwarnings("ignore", category=FutureWarning, module="seaborn")
 sns.set_theme(style="whitegrid")
 
 _CONFIG_KEYS = {"aot.snapshot": "AOT+Snapshot", "snapshot": "Snapshot", "aot": "AOT"}
-_UTILITIES   = ["longest-running", "cold-start", "random", "no-opt"]
+_UTILITIES   = ["longest-running", "cold-start", "random", "sla-violation", "all-rounder", "no-opt"]
 
 def _identify_config(filename: str) -> str:
     return next((v for k, v in _CONFIG_KEYS.items() if k in filename), "Baseline")
@@ -33,6 +33,22 @@ def generate_multi_config_cdf(base_output_path, trace_id):
             df = pd.read_csv(path)
             if df.empty:
                 continue
+
+            if 'invocationsBeforeOpt' in df.columns:
+                df['total_invocations'] = df['invocationsBeforeOpt'] + df['invocationsAfterOpt']
+                df['sla_violations'] = df['slaViolationsBeforeOpt'] + df['slaViolationsAfterOpt']
+                df['violation_rate'] = df['sla_violations'] / df['total_invocations']
+            elif 'total_invocations' in df.columns and 'sla_violations' in df.columns:
+                pass 
+            else:
+                print(f"⚠️ Warning: Skipping {path.name}. Unrecognized column headers: {list(df.columns)}")
+                continue
+            
+            df = df[df['total_invocations'] > 0].copy()
+            if df.empty:
+                continue
+                
+            df['violation_rate'] = df['sla_violations'] / df['total_invocations']
 
             config = _identify_config(filename)
             label  = _identify_label(filename)  # "Baseline (No-Opt)" or "Cold Start", etc.
@@ -71,7 +87,7 @@ def generate_multi_config_cdf(base_output_path, trace_id):
             fontsize=15, fontweight="bold",
         )
         ax.set_xlabel("SLA Violation Rate", fontsize=12)
-        ax.set_ylabel("Percentage of Active Functions (%)", fontsize=12)
+        ax.set_ylabel("Cumulative % of Active Functions", fontsize=12)
         ax.set_xlim(-0.02, 1.05)
         ax.set_ylim(y_start, 100.5)
         ax.legend(title="Utility & Strategy", bbox_to_anchor=(1.05, 1), loc="upper left")
@@ -98,6 +114,21 @@ def generate_separated_cdf_plots(base_output_path, trace_id):
             df = pd.read_csv(path)
             if df.empty:
                 continue
+            
+            required_cols = ['invocationsBeforeOpt', 'slaViolationsBeforeOpt', 'invocationsAfterOpt', 'slaViolationsAfterOpt']
+            if not all(col in df.columns for col in required_cols):
+                # This handles older baseline files that might not have been updated yet
+                print(f"Skipping {path}: Missing required columns.")
+                continue
+
+            df['total_invocations'] = df['invocationsBeforeOpt'] + df['invocationsAfterOpt']
+            df['sla_violations'] = df['slaViolationsBeforeOpt'] + df['slaViolationsAfterOpt']
+            
+            df = df[df['total_invocations'] > 0].copy()
+            if df.empty:
+                continue
+                
+            df['violation_rate'] = df['sla_violations'] / df['total_invocations']
 
             df = df.sort_values("violation_rate", ignore_index=True)
             df["percentile_functions"] = (df.index + 1) / len(df) * 100
@@ -109,7 +140,7 @@ def generate_separated_cdf_plots(base_output_path, trace_id):
             continue
 
         full_df      = pd.concat(all_data, ignore_index=True)
-        baseline_df  = full_df[full_df["ConfigGroup"] == "Baseline"]   # no .copy() needed
+        baseline_df  = full_df[full_df["ConfigGroup"] == "Baseline"]
         opt_groups   = [g for g in full_df["ConfigGroup"].unique() if g != "Baseline"]
 
         for opt in opt_groups:
@@ -134,11 +165,11 @@ def generate_separated_cdf_plots(base_output_path, trace_id):
             )
 
             ax.set_title(
-                f"SLA Violation CDF: {opt} vs Baseline\nFolder: {folder.name} | Trace: {trace_id}",
+                f"SLA Violation CDF: {opt} vs Baseline\nConfiguration: {folder.name} | Trace: {trace_id}",
                 fontsize=15, fontweight="bold",
             )
             ax.set_xlabel("SLA Violation Rate", fontsize=12)
-            ax.set_ylabel("Percentage of Active Functions (%)", fontsize=12)
+            ax.set_ylabel("Cumulative % of Active Functions", fontsize=12)
             ax.set_xlim(-0.02, 1.05)
             ax.set_ylim(y_start, 100.5)
             ax.legend(title="Strategy", bbox_to_anchor=(1.05, 1), loc="upper left")
@@ -153,6 +184,6 @@ def generate_separated_cdf_plots(base_output_path, trace_id):
 
 
 # --- EXECUTION ---
-for trace in ['d01_b1_e60', 'd01_b1_e120', 'd01_b1_e360', 'd01_b1_e720']:
+for trace in ['d01_b1_e60', 'd01_b1_e120', 'd01_b1_e360', 'd01_b1_e720', 'd01_b1_e1440']:
     generate_separated_cdf_plots('output/', trace)
-    #generate_multi_config_cdf('output/', trace)
+    generate_multi_config_cdf('output/', trace)
