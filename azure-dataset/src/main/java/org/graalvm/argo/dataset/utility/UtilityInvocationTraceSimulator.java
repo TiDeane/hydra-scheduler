@@ -55,7 +55,6 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     class UtilitySimulationState extends SimulationState {
         int optimizedColdStarts;
         int optimizedSlaViolations;
-        HashSet<String> optimizedSlaViolationFunctions = new HashSet<>();
         float optimizationCost;
         UtilityCalculator utilityCalculator;
 
@@ -150,7 +149,6 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
                     || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
                     // Optimized SLA violation occurred
                     utilityss.optimizedSlaViolations++;
-                    utilityss.optimizedSlaViolationFunctions.add(currentInvocation.getFunction()); // currently unused
                 }
             }
             utilityss.utilityCalculator.registerColdStart(currentFunction);
@@ -160,7 +158,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
 
             currentInvocation.setDuration(currentInvocation.getP50Duration());
             currentInvocation.setEndTimestamp(currentInvocation.getP50Duration());
-            ss.activeInvocations.remove(warm);
+            ss.removeInvocation(warm);
         }
 
         // we have to check SLA violations here to register with the utility calculator

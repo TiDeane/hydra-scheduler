@@ -118,14 +118,12 @@ public class SimulatorEntryPoint {
             writer.newLine();
             writer.write("Total SLA violations: " + totalSlaViolations);
             writer.newLine();
-            // TODO: maybe include number of functions that suffered SLA violations?
             writer.write("Total SLA violation cost: " + totalSlaViolationsCost);
             writer.newLine();
             writer.write("Total optimized cold starts: " + totalOptimizedColdStarts);
             writer.newLine();
             writer.write("Total optimized SLA violations: " + totalOptimizedSlaViolations);
             writer.newLine();
-            // TODO: maybe include number of optimized functions that suffered SLA violations?
             writer.write("Total optimization cost: " + totalOptimizationCost);
             writer.newLine();
         } catch (IOException e) {

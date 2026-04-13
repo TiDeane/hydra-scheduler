@@ -10,8 +10,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
@@ -67,29 +70,38 @@ public class InvocationTraceSimulator {
         return new Invocation(owner, function, memory, p50duration, p99duration, timestamp);
     }
 
-    protected void evictTimedOutInvocations(TreeSet<? extends Invocation> activeInvocations, int timestamp, int keepalive) {
-        List<Invocation> evict = new LinkedList<>();
-        for (Invocation invocation : activeInvocations) {
-            if (timestamp >= invocation.getEndTimestamp() + keepalive) {
-                evict.add(invocation);
+    protected void evictTimedOutInvocations(SimulationState ss, int timestamp, int keepalive) {
+        Iterator<Invocation> it = ss.activeInvocations.iterator();
+        while (it.hasNext()) {
+            Invocation inv = it.next();
+            if (timestamp >= inv.getEndTimestamp() + keepalive) {
+                it.remove();
+                TreeSet<Invocation> bucket = ss.invocationsByFunction.get(inv.getFunction());
+                if (bucket != null) {
+                    bucket.remove(inv);
+                    if (bucket.isEmpty()) {
+                        ss.invocationsByFunction.remove(inv.getFunction());
+                    }
+                }
             } else {
                 // The activeInvocations tree is ordered. If we fail the above check, later elements will also fail.
                 break;
             }
         }
-        activeInvocations.removeAll(evict);
     }
 
-    // TODO - for these, I don't see a clear reason not to doit in a stream.
-    protected Invocation findWarmInvocation(TreeSet<? extends Invocation> activeInvocations, int timestamp, String function) {
-        for (Invocation invocation : activeInvocations) {
-            if (timestamp < invocation.getEndTimestamp()) {
-                continue;
-            } else if (invocation.getFunction().equals(function)) {
-                return invocation;
-            }
+    protected Invocation findWarmInvocation(SimulationState ss, int timestamp, String function) {
+        TreeSet<Invocation> bucket = ss.invocationsByFunction.get(function);
+        if (bucket == null || bucket.isEmpty()) {
+            return null;
         }
-        return null;
+
+        Invocation candidate = bucket.first(); // smallest endTimestamp for function
+        if (candidate.getEndTimestamp() <= timestamp) {
+            return candidate;
+        } else {
+            return null;
+        }
     }
 
     protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, List<Invocation> runningInvocations, SimulationState ss) {
@@ -104,15 +116,43 @@ public class InvocationTraceSimulator {
         outputEntry.totalFootprint = ss.totalFootprint;
         outputEntry.slaViolations = ss.slaViolations;
         outputEntry.slaViolationsCost = ss.slaViolationsCost;
-        outputEntry.runningUsers = (int) runningInvocations.parallelStream().map(Invocation::getOwner).distinct().count();
-        outputEntry.runningFunctions  = (int) runningInvocations.parallelStream().map(Invocation::getFunction).distinct().count();
-        outputEntry.runningInvocations = runningInvocations.size();
-        outputEntry.runningInvocationsFootprint = (int) runningInvocations.parallelStream().mapToInt(Invocation::getMemory).sum();
-        int totalUsers = (int) activeInvocations.parallelStream().map(Invocation::getOwner).distinct().count();
-        int totalFunctions = (int) activeInvocations.parallelStream().map(Invocation::getFunction).distinct().count();
-        outputEntry.cachedUsers = totalUsers - outputEntry.runningUsers;
-        outputEntry.cachedFunctions = totalFunctions - outputEntry.runningFunctions;
-        outputEntry.cachedInvocationsFootprint = activeInvocations.parallelStream().filter(i -> i.getEndTimestamp() < ss.currentTimestamp).mapToInt(Invocation::getMemory).sum();
+
+        Set<String> runningOwners = new HashSet<>();
+        Set<String> runningFunctions = new HashSet<>();
+        Set<String> totalOwners = new HashSet<>();
+        Set<String> totalFunctions = new HashSet<>();
+
+        long runningMemSum = 0;
+        long cachedMemSum = 0;
+        int runningInvocationsCount = 0;
+        
+        for (Invocation i : activeInvocations) {
+            String owner = i.getOwner();
+            String function = i.getFunction();
+            int memory = i.getMemory();
+
+            totalOwners.add(owner);
+            totalFunctions.add(function);
+
+            if (i.getEndTimestamp() > ss.currentTimestamp) {
+                runningInvocationsCount++;
+                runningMemSum += memory;
+                runningOwners.add(owner);
+                runningFunctions.add(function);
+            } else {
+                cachedMemSum += memory;
+            }
+        }
+
+        outputEntry.runningInvocations = runningInvocationsCount;
+        outputEntry.runningUsers = runningOwners.size();
+        outputEntry.runningFunctions = runningFunctions.size();
+        outputEntry.runningInvocationsFootprint = (int) runningMemSum;
+
+        outputEntry.cachedUsers = totalOwners.size() - outputEntry.runningUsers;
+        outputEntry.cachedFunctions = totalFunctions.size() - outputEntry.runningFunctions;
+        outputEntry.cachedInvocationsFootprint = (int) cachedMemSum;
+
         return outputEntry;
     }
 
@@ -132,7 +172,7 @@ public class InvocationTraceSimulator {
         } else {
             currentInvocation.setDuration(currentInvocation.getP50Duration());
             currentInvocation.setEndTimestamp(currentInvocation.getP50Duration());
-            ss.activeInvocations.remove(warm);
+            ss.removeInvocation(warm);
         }
     }
 
@@ -143,6 +183,12 @@ public class InvocationTraceSimulator {
     protected List<OutputEntry> simulateInvocations(String inputFile, SimulationState ss, int keepalive, int interval) {
         List<OutputEntry> statistics = new LinkedList<>();
         fillDurations(inputFile);
+
+        // Trackers for performance evaluation
+        long firstTraceTimestamp = -1;
+        long nextHourThreshold = -1;
+        long realTimeStartOfHour = System.currentTimeMillis();
+        final long MS_PER_HOUR = 3600000L;
 
         try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
             long totalLines = Files.lines(Paths.get(inputFile)).count() - 1;
@@ -156,6 +202,28 @@ public class InvocationTraceSimulator {
                 int memory = Integer.valueOf(splitRow[2]);
                 int averageDuration = Integer.valueOf(splitRow[3]);
                 int timestamp = Integer.valueOf(splitRow[4]);
+
+                // Initialize the trace start point
+                if (firstTraceTimestamp == -1) {
+                    firstTraceTimestamp = (long) timestamp;
+                    nextHourThreshold = firstTraceTimestamp + MS_PER_HOUR;
+                    realTimeStartOfHour = System.currentTimeMillis();
+                }
+
+                // Check if one simulated hour has passed
+                if (timestamp >= nextHourThreshold) {
+                    long now = System.currentTimeMillis();
+                    long processingDuration = now - realTimeStartOfHour;
+                    
+                    System.out.println(String.format(
+                        "Simulated Hour Finished: Trace Time [%d to %d] | Real-time processing took: %d s",
+                        nextHourThreshold - MS_PER_HOUR, nextHourThreshold, processingDuration / 1000
+                    ));
+
+                    // Reset for the next hour
+                    nextHourThreshold += MS_PER_HOUR;
+                    realTimeStartOfHour = now;
+                }
                 
                 Invocation currentInvocation;
                 if (!FunctionInfoStorage.P50_DURATIONS.containsKey(function) || !FunctionInfoStorage.P99_DURATIONS.containsKey(function)) {
@@ -191,14 +259,14 @@ public class InvocationTraceSimulator {
         ss.currentTimestamp = currentInvocation.getTimestamp();
 
         // Remove invocations that have past their keep alive time.
-        evictTimedOutInvocations(ss.activeInvocations, ss.currentTimestamp, keepalive);
+        evictTimedOutInvocations(ss, ss.currentTimestamp, keepalive);
 
         // We try to find an inactive invocation that can be replaced with the new one.
-        Invocation warm = findWarmInvocation(ss.activeInvocations, ss.currentTimestamp, currentInvocation.getFunction());
+        Invocation warm = findWarmInvocation(ss, ss.currentTimestamp, currentInvocation.getFunction());
         updateAfterWarmCheck(ss, currentInvocation, warm);
 
         // Add invocation to array of active invocations.
-        ss.activeInvocations.add(currentInvocation);
+        ss.addInvocation(currentInvocation);
         ss.invocationsProcessed++;
 
         ss.totalDuration += currentInvocation.getDuration() / 1000; // Convert to seconds
@@ -209,7 +277,6 @@ public class InvocationTraceSimulator {
             || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
             // SLA violation occured
             ss.slaViolations++;
-            ss.slaViolationFunctions.add(currentInvocation.getFunction()); // currently unused
             ss.slaViolationsCost += invocationFootprint;
         }
 
