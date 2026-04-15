@@ -88,15 +88,18 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
     }
 
     @Override
-    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, List<Invocation> runningInvocations, SimulationState ss) {
-        @SuppressWarnings("unchecked")
-        List<UtilityInvocation> runningUtilityInvocations = (List<UtilityInvocation>)(List<?>) runningInvocations;
+    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, SimulationState ss) {
+        UtilitySimulationState utilitySS = (UtilitySimulationState) ss;
         UtilityOutputEntry utilityOutputEntry = new UtilityOutputEntry();
-        utilityOutputEntry.optimizedColdStarts = ((UtilitySimulationState)ss).optimizedColdStarts;
-        utilityOutputEntry.optimizedSlaViolations = ((UtilitySimulationState)ss).optimizedSlaViolations;
-        utilityOutputEntry.optimizationCost = ((UtilitySimulationState)ss).optimizationCost;
-        utilityOutputEntry.runningOptimizedFunctions  = (int) runningUtilityInvocations.parallelStream().filter(UtilityInvocation::isOptimized).map(UtilityInvocation::getFunction).distinct().count();
-        return super.updateStatistics(activeInvocations, runningInvocations, utilityOutputEntry, ss);
+        utilityOutputEntry.optimizedColdStarts = utilitySS.optimizedColdStarts;
+        utilityOutputEntry.optimizedSlaViolations = utilitySS.optimizedSlaViolations;
+        utilityOutputEntry.optimizationCost = utilitySS.optimizationCost;
+        utilityOutputEntry.runningOptimizedFunctions = (int) activeInvocations.stream()
+            .filter(i -> i.getEndTimestamp() > ss.currentTimestamp && ((UtilityInvocation) i).isOptimized())
+            .map(Invocation::getFunction)
+            .distinct()
+            .count();
+        return super.updateStatistics(activeInvocations, utilityOutputEntry, ss);
     }
 
     @Override

@@ -41,13 +41,15 @@ public class AOTInvocationTraceSimulator extends InvocationTraceSimulator {
 
 
     @Override
-    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, List<Invocation> runningInvocations, SimulationState ss) {
-        @SuppressWarnings("unchecked")
-        List<AOTInvocation> runningAOTInvocations = (List<AOTInvocation>)(List<?>) runningInvocations;
+    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, SimulationState ss) {
         AOTOutputEntry aotOutputEntry = new AOTOutputEntry();
         aotOutputEntry.optimizedColdStarts = ((AOTSimulationState)ss).optimizedColdStarts;
-        aotOutputEntry.runningOptimizedFunctions  = (int) runningAOTInvocations.parallelStream().filter(AOTInvocation::isOptimized).map(AOTInvocation::getFunction).distinct().count();
-        return super.updateStatistics(activeInvocations, runningInvocations, aotOutputEntry, ss);
+        aotOutputEntry.runningOptimizedFunctions = (int) activeInvocations.parallelStream()
+            .filter(i -> i.getEndTimestamp() > ss.currentTimestamp && ((AOTInvocation) i).isOptimized())
+            .map(Invocation::getFunction)
+            .distinct()
+            .count();
+        return super.updateStatistics(activeInvocations, aotOutputEntry, ss);
     }
 
     @Override

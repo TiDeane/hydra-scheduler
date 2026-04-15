@@ -16,7 +16,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.stream.Collectors;
 
 /**
  * This class loads an invocation trace and replays each invocation, one at a
@@ -104,11 +103,11 @@ public class InvocationTraceSimulator {
         }
     }
 
-    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, List<Invocation> runningInvocations, SimulationState ss) {
-        return updateStatistics(activeInvocations, runningInvocations, new OutputEntry(), ss);
+    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, SimulationState ss) {
+        return updateStatistics(activeInvocations, new OutputEntry(), ss);
     }
 
-    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, List<Invocation> runningInvocations, OutputEntry outputEntry, SimulationState ss) {
+    protected OutputEntry updateStatistics(TreeSet<Invocation> activeInvocations, OutputEntry outputEntry, SimulationState ss) {
         outputEntry.timestamp = ss.currentTimestamp;
         outputEntry.invocationsProcessed = ss.invocationsProcessed - ss.lastInvocationsProcessed;
         outputEntry.coldStarts = ss.coldStarts;
@@ -246,7 +245,7 @@ public class InvocationTraceSimulator {
         }
         
         // Final update to statistics.
-        statistics.add(updateStatistics(ss.activeInvocations, ss.runningInvocations(), ss));
+        statistics.add(updateStatistics(ss.activeInvocations, ss));
 
         return statistics;
     }
@@ -282,8 +281,7 @@ public class InvocationTraceSimulator {
 
         if (ss.currentTimestamp - ss.previousTimestamp > interval) {
             // Calculate and update statistics.
-            List<Invocation> runningInvocations = ss.activeInvocations.parallelStream().filter(i -> i.getEndTimestamp() > ss.currentTimestamp).collect(Collectors.toList());
-            statistics.add(updateStatistics(ss.activeInvocations, runningInvocations, ss));
+            statistics.add(updateStatistics(ss.activeInvocations, ss));
 
             // Reset values until the next round.
             resetSimulationStateAfterUpdateStatistics(ss);
