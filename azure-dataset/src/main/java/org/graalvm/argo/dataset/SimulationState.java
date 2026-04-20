@@ -1,7 +1,6 @@
 package org.graalvm.argo.dataset;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.TreeSet;
 
 public class SimulationState {
@@ -12,10 +11,10 @@ public class SimulationState {
     public int previousTimestamp;
     public int lastInvocationsProcessed;
     public int coldStarts;
-    public int totalDuration;
-    public int totalFootprint;
+    public long totalDuration;
+    public long totalFootprint;
     public int slaViolations;
-    public int slaViolationsCost; // when an SLA violation occurs, the providers fully pay for the invocation's footprint costs
+    public long slaViolationsCost; // when an SLA violation occurs, the providers fully pay for the invocation's footprint costs
 
     public void addInvocation(Invocation inv) {
         boolean added = activeInvocations.add(inv);

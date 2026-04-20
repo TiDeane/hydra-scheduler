@@ -5,8 +5,11 @@ import org.graalvm.argo.dataset.generator.FunctionInfoStorage;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -183,14 +186,13 @@ public class InvocationTraceSimulator {
         List<OutputEntry> statistics = new LinkedList<>();
         fillDurations(inputFile);
 
-        // Trackers for performance evaluation
-        long firstTraceTimestamp = -1;
-        long nextHourThreshold = -1;
-        long realTimeStartOfHour = System.currentTimeMillis();
-        final long MS_PER_HOUR = 3600000L;
+        try (FileInputStream fis = new FileInputStream(inputFile);
+             FileChannel channel = fis.getChannel();
+             BufferedReader br = new BufferedReader(new InputStreamReader(fis))) {
 
-        try (BufferedReader br = new BufferedReader(new FileReader(inputFile))) {
-            long totalLines = Files.lines(Paths.get(inputFile)).count() - 1;
+            long fileSize = Files.size(Paths.get(inputFile));
+            int lastPrintedPercent = 0;
+
             String line;
             br.readLine(); // Skip header
             
@@ -202,28 +204,6 @@ public class InvocationTraceSimulator {
                 int averageDuration = Integer.valueOf(splitRow[3]);
                 int timestamp = Integer.valueOf(splitRow[4]);
 
-                // Initialize the trace start point
-                if (firstTraceTimestamp == -1) {
-                    firstTraceTimestamp = (long) timestamp;
-                    nextHourThreshold = firstTraceTimestamp + MS_PER_HOUR;
-                    realTimeStartOfHour = System.currentTimeMillis();
-                }
-
-                // Check if one simulated hour has passed
-                if (timestamp >= nextHourThreshold) {
-                    long now = System.currentTimeMillis();
-                    long processingDuration = now - realTimeStartOfHour;
-                    
-                    System.out.println(String.format(
-                        "Simulated Hour Finished: Trace Time [%d to %d] | Real-time processing took: %d s",
-                        nextHourThreshold - MS_PER_HOUR, nextHourThreshold, processingDuration / 1000
-                    ));
-
-                    // Reset for the next hour
-                    nextHourThreshold += MS_PER_HOUR;
-                    realTimeStartOfHour = now;
-                }
-                
                 Invocation currentInvocation;
                 if (!FunctionInfoStorage.P50_DURATIONS.containsKey(function) || !FunctionInfoStorage.P99_DURATIONS.containsKey(function)) {
                     // use average duration
@@ -236,8 +216,10 @@ public class InvocationTraceSimulator {
 
                 processInvocation(statistics, currentInvocation, ss, keepalive, interval);
 
-                if (ss.invocationsProcessed % Math.max(totalLines / 100, 1) == 0) {
-                    System.err.println(String.format("Processed %d (%.2f %%)", ss.invocationsProcessed, ((float) ss.invocationsProcessed / totalLines * 100)));
+                int progress = (int) (channel.position() * 100 / fileSize);
+                if (progress > lastPrintedPercent) {
+                    lastPrintedPercent = progress;
+                    System.err.println(String.format("Processed %d (%.2f %%)", ss.invocationsProcessed, (float) progress));
                 }
             }
         } catch (IOException e) {

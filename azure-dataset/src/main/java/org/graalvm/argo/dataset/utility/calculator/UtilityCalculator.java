@@ -146,8 +146,8 @@ public abstract class UtilityCalculator {
     int memory = functionInfo.memory;
 
     int threshold = Math.max(p50duration * 4, 4);
-    int dur_snapshot = (int) (p50duration + SNAPSHOT_RESTORE_PENALTY);
-    int dur_aot = (int) (p99duration * OPTIMIZED_AOT_DURATION_RATIO);
+    float dur_snapshot = (float) (p50duration + SNAPSHOT_RESTORE_PENALTY);
+    float dur_aot = (float) (p99duration * OPTIMIZED_AOT_DURATION_RATIO);
 
     boolean snapshot_cures = dur_snapshot <= threshold;
     boolean aot_cures = dur_aot <= threshold;
@@ -157,8 +157,8 @@ public abstract class UtilityCalculator {
     if (aot_cures && !snapshot_cures) return "AOT";
 
     // tie-breaker: choose the one with the lower footprint
-    int footprint_snapshot = (int) (dur_snapshot * (memory * OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO));
-    int footprint_aot = (int) (dur_aot * (memory * OPTIMIZED_AOT_FOOTPRINT_RATIO));
+    float footprint_snapshot = (float) (dur_snapshot * (memory * OPTIMIZED_SNAPSHOT_FOOTPRINT_RATIO));
+    float footprint_aot = (float) (dur_aot * (memory * OPTIMIZED_AOT_FOOTPRINT_RATIO));
     
     if (footprint_aot < footprint_snapshot) return "AOT";
     else return "SNAPSHOT";

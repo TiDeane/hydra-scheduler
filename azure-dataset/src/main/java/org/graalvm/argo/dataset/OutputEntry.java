@@ -9,13 +9,13 @@ public class OutputEntry {
     // Cold starts since the last output entry.
     protected int coldStarts;
     // Total duration of invocations processed since the last output entry.
-    protected int totalDuration;
+    protected long totalDuration;
     // Total memory footprint of invocations processed since the last output entry.
-    protected int totalFootprint;
+    protected long totalFootprint;
     // Total number of SLA violations (Duration > P50 * APDEX_FRUSTRATION_RATIO)
     protected int slaViolations;
     // Total cost of SLA violations (the provider pays for the full footprint cost of invocations that suffer SLA violations)
-    protected int slaViolationsCost;
+    protected long slaViolationsCost;
     // Current number of users, functions, invocations, and invocation footprint (MBs).
     protected int runningUsers;
     protected int runningFunctions;
