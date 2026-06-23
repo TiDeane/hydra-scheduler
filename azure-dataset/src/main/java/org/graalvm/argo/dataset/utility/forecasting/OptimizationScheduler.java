@@ -46,7 +46,7 @@ public class OptimizationScheduler {
     try {
       CommandLine cmd = new DefaultParser().parse(options, args);
       String inputfile = cmd.getOptionValue("input");
-      String outputFile = cmd.getOptionValue("outputFile", inputfile.replace(".csv", PREDICTIONS_SUFFIX));
+      String outputFile = inputfile.replace(".csv", PREDICTIONS_SUFFIX);
 
       long start = System.currentTimeMillis();
       processTrace(inputfile, outputFile);
@@ -65,9 +65,6 @@ public class OptimizationScheduler {
     Option input = new Option("i", "input", true, "Input invocation trace file path.");
     input.setRequired(true);
     options.addOption(input);
-    Option output = new Option("o", "output", true, "Output expected invocations file path.");
-    output.setRequired(false);
-    options.addOption(output);
     return options;
   }
 

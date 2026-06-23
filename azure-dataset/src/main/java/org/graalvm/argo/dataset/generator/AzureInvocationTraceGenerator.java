@@ -151,6 +151,9 @@ public class AzureInvocationTraceGenerator {
         if (compress) {
             writeMapping(outputFilePath, "function_mapping.csv", "HashFunction,CompressedHash", FunctionInfoStorage.COMPRESSED_MAPPING);
             writeMapping(outputFilePath, "owner_mapping.csv", "HashOwner,CompressedHash", compressedOwnerMapping);
+            writeDurationStats(outputFilePath, "function_durations.csv", "CompressedHash,P50Duration,P99Duration");
+        } else {
+            writeDurationStats(outputFilePath, "function_durations.csv", "HashFunction,P50Duration,P99Duration");
         }
     }
 
@@ -169,6 +172,28 @@ public class AzureInvocationTraceGenerator {
         }
     }
 
+    private void writeDurationStats(String path, String outputMapping, String header) throws IOException {
+        Path inputPath = Paths.get(path);
+        Path parentDir = inputPath.getParent();
+        File targetFile = (parentDir != null) ? parentDir.resolve(outputMapping).toFile() : new File(outputMapping);
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(targetFile, false))) {
+            writer.write(header);
+            writer.newLine();
+            for (String hash : FunctionInfoStorage.FUNCTIONS_SEEN) {
+                String id = hash;
+                if (FunctionInfoStorage.COMPRESSED_MAPPING.get(hash) != null) {
+                    id = FunctionInfoStorage.COMPRESSED_MAPPING.get(hash).toString();
+                }
+                long p50 = FunctionInfoStorage.P50_DURATIONS.get(hash);
+                long p99 = FunctionInfoStorage.P99_DURATIONS.get(hash);
+
+                writer.write(id  + "," + p50 + "," + p99);
+                writer.newLine();
+            }
+        }
+    }
+
     private void processFunction(String line, int firstMinute, int lastMinute, BufferedWriter writer) {
         String[] splitRow = line.split(SOURCE_DELIMITER);
         String owner = splitRow[0];
@@ -181,6 +206,7 @@ public class AzureInvocationTraceGenerator {
             return;
         }
 
+        FunctionInfoStorage.FUNCTIONS_SEEN.add(function);
         int memory = FunctionInfoStorage.MEMORIES.get(app);
         int duration = FunctionInfoStorage.DURATIONS.get(function);
 
