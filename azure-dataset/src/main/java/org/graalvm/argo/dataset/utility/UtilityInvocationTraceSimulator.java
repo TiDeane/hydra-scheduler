@@ -6,7 +6,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashSet;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -176,6 +175,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         UtilitySimulationState utilityss = new UtilitySimulationState();
         List<OutputEntry> output = simulateInvocations(inputFile, utilityss, keepalive, interval);
         writeCdfData(inputFile, utilityss);
+        // writeOptimizedFunctions(inputFile, utilityss);
         return output;
     }
 
@@ -220,6 +220,41 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
             }
         } catch (IOException e) {
             System.err.println("Error writing CDF data to " + cdfFile.getAbsolutePath() + ": " + e.getMessage());
+        }
+    }
+
+    /*
+     * Uncomment the function call if you want to store which functions were optimized to file
+    */
+    private void writeOptimizedFunctions(String inputFile, UtilitySimulationState utilityss) {
+        File input = new File(inputFile);
+        String parentDir = input.getParent();
+
+        String folderName = String.format("m%d_oa%d_ob%d_uci%d_oi%d",
+                Configuration.MAX_OPTIMIZED,
+                Configuration.OPTIMIZATION_AMOUNT,
+                Configuration.OPTIMIZATION_BUDGET,
+                Configuration.UTILITY_CALCULATION_INTERVAL / 60000,
+                Configuration.OPTIMIZATION_INTERVAL / 60000
+        );
+
+        Path targetDirPath = Paths.get(parentDir, folderName);
+        String optimizationFileName = String.format("%s_%s_optimized_functions.csv", input.getName().replace(".csv", ""), utilityCalculationMethod);
+        System.out.println("Writing optimized functions to " + targetDirPath.resolve(optimizationFileName).toAbsolutePath());
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(targetDirPath.resolve(optimizationFileName).toFile()))) {
+            writer.write("functionHash,optimization");
+            writer.newLine();
+            for (String function : utilityss.utilityCalculator.optimizedFunctionsSnapshot) {
+                writer.write(function + ",snap");
+                writer.newLine();
+            }
+            for (String function : utilityss.utilityCalculator.optimizedFunctionsAOT) {
+                writer.write(function + ",aot");
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.err.println("Error writing optimized functions: " + e.getMessage());
         }
     }
 }

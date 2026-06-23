@@ -1,6 +1,5 @@
 package org.graalvm.argo.dataset;
 
-import org.graalvm.argo.dataset.generator.InvocationTraceGenerator;
 import org.graalvm.argo.dataset.generator.FunctionInfoStorage;
 
 import java.io.BufferedReader;
@@ -197,7 +196,7 @@ public class InvocationTraceSimulator {
             br.readLine(); // Skip header
             
             while ((line = br.readLine()) != null) {
-                String[] splitRow = line.split(InvocationTraceGenerator.DELIMITER);
+                String[] splitRow = line.split(InvocationTraceFormat.DELIMITER);
                 String owner = splitRow[0];
                 String function = splitRow[1];
                 int memory = Integer.valueOf(splitRow[2]);

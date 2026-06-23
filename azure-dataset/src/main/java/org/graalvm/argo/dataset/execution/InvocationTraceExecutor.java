@@ -2,7 +2,7 @@ package org.graalvm.argo.dataset.execution;
 
 import org.graalvm.argo.dataset.execution.utils.Benchmark;
 import org.graalvm.argo.dataset.execution.utils.FunctionRuntime;
-import org.graalvm.argo.dataset.generator.InvocationTraceGenerator;
+import org.graalvm.argo.dataset.InvocationTraceFormat;
 import org.graalvm.argo.dataset.multilang.FunctionLanguage;
 import org.graalvm.argo.dataset.utils.network.SocketNetworkUtils;
 
@@ -34,7 +34,7 @@ public class InvocationTraceExecutor {
             /* Used to avoid waiting on the same period multiple times. */
             int lastCheckedTimestamp = 0;
             while ((line = br.readLine()) != null) {
-                splitRow = line.split(InvocationTraceGenerator.DELIMITER);
+                splitRow = line.split(InvocationTraceFormat.DELIMITER);
                 String owner = getOwnerName(splitRow[0]);
                 int timestamp = Integer.parseInt(splitRow[4]);
                 String benchmarkName = splitRow[6];
@@ -64,7 +64,7 @@ public class InvocationTraceExecutor {
             String[] splitRow;
             br.readLine(); // To skip the header
             while ((line = br.readLine()) != null) {
-                splitRow = line.split(InvocationTraceGenerator.DELIMITER);
+                splitRow = line.split(InvocationTraceFormat.DELIMITER);
                 String owner = getOwnerName(splitRow[0]);
                 String benchmarkName = splitRow[6];
                 String function = getFunctionName(splitRow[1], benchmarkName);
