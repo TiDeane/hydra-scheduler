@@ -1,6 +1,91 @@
 import pandas as pd
 from pathlib import Path
+import math
+import re
 import sys
+
+
+MAX_OPTIMIZED_FUNCS = 4000
+SELECTION_INTERVAL = 60  # minutes
+
+def calculate_total_funcs(config, trace):
+    """
+    Calculate the number of functions that have actually been
+    optimized by the end of the trace.
+
+    Configuration:
+        m4000_oaX_obY_uci60_oi10
+
+    X = number of functions selected every 60 minutes
+    Y = number of functions optimized every 10 minutes
+
+    Example:
+        m4000_oa1000_ob200_uci60_oi10
+        d01_b1_e120
+
+        First selection: minute 60
+        1000 functions selected
+        200 optimized every 10 minutes
+
+        Complete at:
+            70 -> 200
+            80 -> 400
+            90 -> 600
+            100 -> 800
+            110 -> 1000
+
+        Second selection occurs at minute 120, but the trace
+        ends there, so those functions are not counted.
+
+        Result: 1000
+    """
+
+    # Parse configuration.
+    match = re.search(
+        r"m(\d+)_oa(\d+)_ob(\d+)_uci(\d+)_oi(\d+)",
+        config
+    )
+
+    if not match:
+        raise ValueError(f"Could not parse configuration: {config}")
+
+    max_funcs = int(match.group(1))
+    oa = int(match.group(2))
+    ob = int(match.group(3))
+    uci = int(match.group(4))
+
+    # Parse trace duration.
+    match = re.search(r"_e(\d+)$", trace)
+
+    if not match:
+        raise ValueError(f"Could not parse trace duration: {trace}")
+
+    duration = int(match.group(1))
+
+    # Number of 10-minute optimization rounds required to
+    # optimize one complete selection of `oa` functions.
+    rounds_required = math.ceil(oa / ob)
+
+    # Time required to finish one selection.
+    optimization_time = rounds_required * 10
+
+    total_funcs = 0
+
+    # Selection occurs every `uci` minutes.
+    selection_time = uci
+
+    while selection_time < duration:
+        completion_time = selection_time + optimization_time
+
+        # Only count functions whose optimization has completed
+        # before the trace ends.
+        if completion_time <= duration:
+            total_funcs += oa
+
+        selection_time += uci
+
+    # Never exceed the configured maximum.
+    return min(total_funcs, max_funcs)
 
 def get_highest_guarantee(fulfillment_pct):
     """
@@ -108,10 +193,10 @@ def summarize_sla_improvements(root_dir):
         return
 
     for file_path in files:
-        config = file_path.parent.name 
+        config = file_path.parent.name
         filename = file_path.name
         core_name = filename.replace("_sla_report.csv", "")
-        
+
         try:
             parts = core_name.rsplit("_", 2)
             trace = parts[0] if len(parts) == 3 else core_name
@@ -119,12 +204,20 @@ def summarize_sla_improvements(root_dir):
             opt = parts[2] if len(parts) == 3 else "N/A"
 
             df = pd.read_csv(file_path)
-            if df.empty: continue
+            if df.empty:
+                continue
 
-            total_funcs = len(df)
-            improvements = df['improvement-in-SLA-class-offering-possible'].sum()
-            improvement_pct = (improvements / total_funcs) * 100 if total_funcs > 0 else 0
-            
+            # Calculate the expected number of optimized functions.
+            total_funcs = calculate_total_funcs(config, trace)
+
+            improvements = df[
+                "improvement-in-SLA-class-offering-possible"
+            ].sum()
+
+            improvement_pct = (
+                improvements / total_funcs
+            ) * 100 if total_funcs > 0 else 0
+
             results.append({
                 "Config": config,
                 "Trace": trace,
@@ -133,6 +226,7 @@ def summarize_sla_improvements(root_dir):
                 "Improved %": round(improvement_pct, 2),
                 "Total Funcs": total_funcs
             })
+
         except Exception as e:
             print(f"Error processing {filename}: {e}")
 

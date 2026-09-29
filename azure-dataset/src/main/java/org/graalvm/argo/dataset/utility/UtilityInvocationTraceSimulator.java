@@ -115,7 +115,8 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         int currentTimestamp = utilityss.currentTimestamp;
 
         /* We make use of this function to perform utility calculation and optimization */
-        if (currentTimestamp - utilityss.utilityCalculator.lastUtilityCalculation > Configuration.UTILITY_CALCULATION_INTERVAL) {
+        if (currentTimestamp - utilityss.utilityCalculator.lastUtilityCalculation > Configuration.UTILITY_CALCULATION_INTERVAL
+                && currentTimestamp > Configuration.OPTIMIZATION_START_TIMESTAMP) {
             utilityss.utilityCalculator.calculateUtilityScores(currentTimestamp);
         }
 
@@ -126,6 +127,10 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
                 System.err.println("Total AOT-optimized functions: " + utilityss.utilityCalculator.optimizedFunctionsAOT.size());
                 System.err.println("Total Snapshot-optimized functions: " + utilityss.utilityCalculator.optimizedFunctionsSnapshot.size());
                 System.err.println("Total optimized functions: " + (utilityss.utilityCalculator.optimizedFunctionsAOT.size() + utilityss.utilityCalculator.optimizedFunctionsSnapshot.size()));
+                // if ((utilityss.utilityCalculator.optimizedFunctionsAOT.size() + utilityss.utilityCalculator.optimizedFunctionsSnapshot.size() >= 1000)) {
+                //     writeOptimizedFunctions(inputFilePath, utilityss);
+                //     System.exit(0);
+                // }
             }
             utilityss.utilityCalculator.lastOptimizationRound = currentTimestamp;
         }
@@ -147,7 +152,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
                     currentUtilityInvocation.optimize("AOT");
                 }
 
-                if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * super.APDEX_FRUSTRATION_THRESHOLD
+                if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * APDEX_FRUSTRATION_THRESHOLD
                     || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
                     // Optimized SLA violation occurred
                     utilityss.optimizedSlaViolations++;
@@ -164,7 +169,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         }
 
         // we have to check SLA violations here to register with the utility calculator
-        if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * super.APDEX_FRUSTRATION_THRESHOLD
+        if (currentInvocation.getDuration() >  currentInvocation.getP50Duration() * APDEX_FRUSTRATION_THRESHOLD
             || (currentInvocation.getP50Duration() == 0 && currentInvocation.getDuration() > APDEX_FRUSTRATION_THRESHOLD)) {
             // SLA violation occurred
             utilityss.utilityCalculator.registerSlaViolations(currentFunction);
@@ -175,7 +180,7 @@ public class UtilityInvocationTraceSimulator extends InvocationTraceSimulator {
         UtilitySimulationState utilityss = new UtilitySimulationState();
         List<OutputEntry> output = simulateInvocations(inputFile, utilityss, keepalive, interval);
         writeCdfData(inputFile, utilityss);
-        // writeOptimizedFunctions(inputFile, utilityss);
+        writeOptimizedFunctions(inputFile, utilityss);
         return output;
     }
 

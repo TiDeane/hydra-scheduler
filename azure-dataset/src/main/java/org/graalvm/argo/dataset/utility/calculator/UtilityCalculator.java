@@ -173,32 +173,51 @@ public abstract class UtilityCalculator {
 
   public float runOptimizationRound(int currentTimestamp) {
     try {
+      int budget = Configuration.OPTIMIZATION_BUDGET;
+      float optimizationCost = 0;
+
+      if (optimizationQueue.size() <= Configuration.OPTIMIZATION_BUDGET) {
+        // should always happen
+        Iterator<String> iter = optimizationQueue.iterator();
+        while (iter.hasNext() && budget > 0) {
+          String function = iter.next();
+          optimizationCost += optimize(function);
+          iter.remove();
+          budget--;
+        }
+
+        if (!optimizationQueue.isEmpty()) {
+          System.out.println("DEBUG: optimization round finished but queue is not empty!");
+        }
+        
+        this.lastOptimizationRound = currentTimestamp;
+        return optimizationCost / 1000;
+      }
+
+      System.out.println("DEBUG: budget smaller than optimization queue, using forecasting");
       PriorityQueue<ForecastEntry> hotFunctions = null;
       if (forecastProvider != null) {
         hotFunctions = forecastProvider.getRelevantForecast(currentTimestamp, optimizationQueue);
       }
 
-      float optimizationCost = 0;
-      int budgetRemaining = Configuration.OPTIMIZATION_BUDGET;
-
       // Optimize functions with highest expected imminent invocations
       if (hotFunctions != null) {
-        while (!hotFunctions.isEmpty() && budgetRemaining > 0 && !optimizationQueue.isEmpty()) {
+        while (!hotFunctions.isEmpty() && budget > 0 && !optimizationQueue.isEmpty()) {
           ForecastEntry entry = hotFunctions.poll();
           optimizationCost += optimize(entry.function());
           optimizationQueue.remove(entry.function());
-          budgetRemaining--;
+          budget--;
         }
       }
 
       // Optimize remaining candidates randomly
-      if (budgetRemaining > 0 && !optimizationQueue.isEmpty()) {
+      if (budget > 0 && !optimizationQueue.isEmpty()) {
         Iterator<String> iter = optimizationQueue.iterator();
-        while (iter.hasNext() && budgetRemaining > 0) {
+        while (iter.hasNext() && budget > 0) {
           String function = iter.next();
           optimizationCost += optimize(function);
           iter.remove();
-          budgetRemaining--;
+          budget--;
         }
       }
 
