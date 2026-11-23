@@ -52,6 +52,7 @@ public class ExternalTraceSorter {
       }
     }
 
+    /* HashOwner, HashFunction, AverageAllocatedMb, AverageDuration, Timestamp */
     public static void sortTraceByTimestamp(String inputFile, String outputFile, boolean hasHeader) throws IOException {
         List<File> tempFiles = new ArrayList<>();
         String headerLine = null;

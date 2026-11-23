@@ -16,6 +16,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Random;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -93,7 +94,8 @@ public class LanguageRandomizer {
         Map<String, Long> functionInvocations = invocations.stream()
                 .collect(Collectors.groupingBy(Invocation::getFunction, Collectors.counting()));
         List<Map.Entry<String, Long>> functionsList = new ArrayList<>(functionInvocations.entrySet());
-        Collections.shuffle(functionsList);
+        functionsList.sort(Map.Entry.comparingByKey());
+        Collections.shuffle(functionsList, new Random(42));
 
         int currentInvocationsNumber = 0;
         int jsThreshold = (int) (invocationsNumber * ((double) JAVASCRIPT_PERC / 100));
@@ -112,7 +114,7 @@ public class LanguageRandomizer {
                 language = FunctionLanguage.JAVA;
             }
 
-            String benchmarkName = BenchmarkDuration.getBenchmark(language, duration);
+            String benchmarkName = BenchmarkDuration.getBenchmark(language, duration, functionEntry.getKey());
             FunctionRecord record = new FunctionRecord(language, benchmarkName);
             result.put(functionEntry.getKey(), record);
         }

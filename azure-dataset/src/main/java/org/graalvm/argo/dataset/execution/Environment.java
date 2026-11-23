@@ -20,4 +20,11 @@ public class Environment {
     public final static int FAKE_WORKER_FIRST_PORT = 50010;
 
     public static final int VM_MEMORY = 1024;
+
+    // Optimization configuration.
+    public static final String OPT_SNAP = "snap";
+    public static final String OPT_AOT = "aot";
+    public static final String OPT_WARM = "warm"; // pre-warming
+    public static final String OPT_NONE = "none";
+    public static final String OPTIMIZATION_MAPPING_FILE = "/home/tdeane/argo/scheduler/azure-dataset/output/d01_b1_e120_cold-start_optimized_functions.csv";
 }

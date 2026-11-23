@@ -6,20 +6,30 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
 public class FunctionInfoStorage {
 
     private static final String DELIMITER = ",";
 
+    public static final Set<String> FUNCTIONS_SEEN = new HashSet<>();
     /* Key - function */
     public static final Map<String, Integer> DURATIONS = new HashMap<>();
+    /* Key - function */
+    public static final Map<String, Integer> P50_DURATIONS = new HashMap<>();
+    /* Key - function */
+    public static final Map<String, Integer> P99_DURATIONS = new HashMap<>();
     /* Key - function */
     public static final Map<String, Integer> COMPRESSED_MAPPING = new HashMap<>();
     /* Key - app */
     public static final Map<String, Integer> MEMORIES = new HashMap<>();
 
     public static void fillFunctionData(String datasetId) {
+        FUNCTIONS_SEEN.clear();
         DURATIONS.clear();
+        P50_DURATIONS.clear();
+        P99_DURATIONS.clear();
         MEMORIES.clear();
         COMPRESSED_MAPPING.clear();
         fillDurations(datasetId);
@@ -41,6 +51,10 @@ public class FunctionInfoStorage {
                 String function = splitRow[2];
                 int averageDuration = Integer.parseInt(splitRow[3]);
                 DURATIONS.put(function, averageDuration);
+                int p50Duration = Integer.parseInt(splitRow[10]);
+                P50_DURATIONS.put(function, p50Duration);
+                int p99Duration = Integer.parseInt(splitRow[12]);
+                P99_DURATIONS.put(function, p99Duration);
             }
             br.close();
         } catch (IOException ioe) {

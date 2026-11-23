@@ -86,6 +86,7 @@ public class InvocationTraceExecutor {
         long timeDifference = traceTimestamp - realTimestamp;
         if (timeDifference > 0) {
             try {
+                //TODO: check if this is being called by the workers...
                 System.out.println("Sleeping (ms) " + timeDifference);
                 Thread.sleep(timeDifference);
             } catch (InterruptedException e) {

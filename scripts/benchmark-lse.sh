@@ -12,6 +12,8 @@ function DIR {
     echo "$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 }
 
+export LOCAL_EXECUTION=yes
+
 # Defines some variables and functions
 source $(DIR)/shared.sh
 
@@ -57,7 +59,7 @@ function process_dataset {
         multi_worker_option="--multiWorker"
     fi
 
-    time $JAVA_HOME/bin/java -cp $azure_executor_jar $azure_executor_entrypoint \
+    time $JAVA_HOME/bin/java -Xmx2g -cp $azure_executor_jar $azure_executor_entrypoint \
         --input $csv_file \
         --lambdaManagerAddress $LAMBDA_MANAGER_ADDRESS \
         --executionMode $execution_mode $multi_worker_option &> $EXECUTOR_LOG_FILE

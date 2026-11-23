@@ -6,43 +6,184 @@
       "entryPoint" : "Hello",
       "payload" : "{\"name\":\"rbruno\"}",
       "memory"  : 512,
-      "duration" : 5
+      "duration" : 8
     },
     "jvfh" : {
       "language" : "java",
       "benchmarkName" : "jvfh",
       "code" : "knative-jv/kn-file-hashing",
       "entryPoint" : "Main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/snap.png\"}",
-      "memory"  : 1024,
-      "duration" : 8
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 512,
+      "duration" : 11
     },
     "jvcl" : {
       "language" : "java",
       "benchmarkName" : "jvcl",
       "code" : "knative-jv/kn-classify",
       "entryPoint" : "Main",
-      "payload" : "{\"model_url\":\"http://172.18.0.1:8000/tensorflow_inception_graph.pb\",\"labels_url\":\"http://172.18.0.1:8000/imagenet_comp_graph_label_strings.txt\",\"image_url\":\"http://172.18.0.1:8000/eagle.jpg\"}",
+      "payload" : "{\"model_url\":\"http://172.17.0.1:8000/tensorflow_inception_graph.pb\",\"labels_url\":\"http://172.17.0.1:8000/imagenet_comp_graph_label_strings.txt\",\"image_url\":\"http://172.17.0.1:8000/eagle.jpg\"}",
       "memory"  : 2048,
-      "duration" : 4430
+      "duration" : 193
     },
     "jvhr" : {
       "language" : "java",
       "benchmarkName" : "jvhr",
       "code" : "knative-jv/kn-httprequest",
       "entryPoint" : "Main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/snap.png\"}",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
       "memory"  : 512,
-      "duration" : 7
+      "duration" : 10
     },
     "jvvp" : {
       "language" : "java",
       "benchmarkName" : "jvvp",
       "code" : "knative-jv/kn-video-processing",
       "entryPoint" : "Main",
-      "payload" : "{\"video\":\"http://172.18.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.18.0.1:8000/ffmpeg\"}",
+      "payload" : "{\"video\":\"http://172.17.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.17.0.1:8000/ffmpeg\"}",
       "memory"  : 2048,
-      "duration" : 25175
+      "duration" : 1044
+    },
+
+
+    "jvhw-aot" : {
+      "language" : "java",
+      "benchmarkName" : "jvhw-aot",
+      "code" : "knative-jv/kn-hello-world-aot",
+      "entryPoint" : "Hello",
+      "payload" : "{\"name\":\"rbruno\"}",
+      "memory"  : 256,
+      "duration" : 4
+    },
+    "jvfh-aot" : {
+      "language" : "java",
+      "benchmarkName" : "jvfh-aot",
+      "code" : "knative-jv/kn-file-hashing-aot",
+      "entryPoint" : "Main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 8
+    },
+    "jvcl-aot" : {
+      "language" : "java",
+      "benchmarkName" : "jvcl-aot",
+      "code" : "knative-jv/kn-classify-aot",
+      "entryPoint" : "Main",
+      "payload" : "{\"model_url\":\"http://172.17.0.1:8000/tensorflow_inception_graph.pb\",\"labels_url\":\"http://172.17.0.1:8000/imagenet_comp_graph_label_strings.txt\",\"image_url\":\"http://172.17.0.1:8000/eagle.jpg\"}",
+      "memory"  : 2048,
+      "duration" : 155
+    },
+    "jvhr-aot" : {
+      "language" : "java",
+      "benchmarkName" : "jvhr-aot",
+      "code" : "knative-jv/kn-httprequest-aot",
+      "entryPoint" : "Main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 8
+    },
+    "jvvp-aot" : {
+      "language" : "java",
+      "benchmarkName" : "jvvp-aot",
+      "code" : "knative-jv/kn-video-processing-aot",
+      "entryPoint" : "Main",
+      "payload" : "{\"video\":\"http://172.17.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.17.0.1:8000/ffmpeg\"}",
+      "memory"  : 2048,
+      "duration" : 1005
+    },
+
+
+    "jvhw-snap" : {
+      "language" : "java",
+      "benchmarkName" : "jvhw-snap",
+      "code" : "knative-jv/kn-hello-world-snap",
+      "entryPoint" : "Hello",
+      "payload" : "{\"name\":\"rbruno\"}",
+      "memory"  : 512,
+      "duration" : 8
+    },
+    "jvfh-snap" : {
+      "language" : "java",
+      "benchmarkName" : "jvfh-snap",
+      "code" : "knative-jv/kn-file-hashing-snap",
+      "entryPoint" : "Main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 512,
+      "duration" : 9
+    },
+    "jvcl-snap" : {
+      "language" : "java",
+      "benchmarkName" : "jvcl-snap",
+      "code" : "knative-jv/kn-classify-snap",
+      "entryPoint" : "Main",
+      "payload" : "{\"model_url\":\"http://172.17.0.1:8000/tensorflow_inception_graph.pb\",\"labels_url\":\"http://172.17.0.1:8000/imagenet_comp_graph_label_strings.txt\",\"image_url\":\"http://172.17.0.1:8000/eagle.jpg\"}",
+      "memory"  : 1024,
+      "duration" : 193
+    },
+    "jvhr-snap" : {
+      "language" : "java",
+      "benchmarkName" : "jvhr-snap",
+      "code" : "knative-jv/kn-httprequest-snap",
+      "entryPoint" : "Main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 512,
+      "duration" : 9
+    },
+    "jvvp-snap" : {
+      "language" : "java",
+      "benchmarkName" : "jvvp-snap",
+      "code" : "knative-jv/kn-video-processing-snap",
+      "entryPoint" : "Main",
+      "payload" : "{\"video\":\"http://172.17.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.17.0.1:8000/ffmpeg\"}",
+      "memory"  : 2048,
+      "duration" : 1025
+    },
+
+
+    "jvhw-warm" : {
+      "language" : "java",
+      "benchmarkName" : "jvhw-warm",
+      "code" : "knative-jv/kn-hello-world-warm",
+      "entryPoint" : "Hello",
+      "payload" : "{\"name\":\"rbruno\"}",
+      "memory"  : 512,
+      "duration" : 8
+    },
+    "jvfh-warm" : {
+      "language" : "java",
+      "benchmarkName" : "jvfh-warm",
+      "code" : "knative-jv/kn-file-hashing-warm",
+      "entryPoint" : "Main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 512,
+      "duration" : 10
+    },
+    "jvcl-warm" : {
+      "language" : "java",
+      "benchmarkName" : "jvcl-warm",
+      "code" : "knative-jv/kn-classify-warm",
+      "entryPoint" : "Main",
+      "payload" : "{\"model_url\":\"http://172.17.0.1:8000/tensorflow_inception_graph.pb\",\"labels_url\":\"http://172.17.0.1:8000/imagenet_comp_graph_label_strings.txt\",\"image_url\":\"http://172.17.0.1:8000/eagle.jpg\"}",
+      "memory"  : 2048,
+      "duration" : 193
+    },
+    "jvhr-warm" : {
+      "language" : "java",
+      "benchmarkName" : "jvhr-warm",
+      "code" : "knative-jv/kn-httprequest-warm",
+      "entryPoint" : "Main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 512,
+      "duration" : 8
+    },
+    "jvvp-warm" : {
+      "language" : "java",
+      "benchmarkName" : "jvvp-warm",
+      "code" : "knative-jv/kn-video-processing-warm",
+      "entryPoint" : "Main",
+      "payload" : "{\"video\":\"http://172.17.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.17.0.1:8000/ffmpeg\"}",
+      "memory"  : 2048,
+      "duration" : 1038
     },
   
   
@@ -54,7 +195,7 @@
       "entryPoint" : "main",
       "payload" : "{\"name\":\"rbruno\"}",
       "memory"  : 256,
-      "duration" : 5
+      "duration" : 6
     },
     "pyms" : {
       "language" : "python",
@@ -63,7 +204,7 @@
       "entryPoint" : "main",
       "payload" : "{\"size\":\"100\"}",
       "memory"  : 256,
-      "duration" : 12
+      "duration" : 6
     },
     "pybf" : {
       "language" : "python",
@@ -72,7 +213,7 @@
       "entryPoint" : "main",
       "payload" : "{\"size\":\"100\"}",
       "memory"  : 256,
-      "duration" : 10
+      "duration" : 6
     },
     "pypr" : {
       "language" : "python",
@@ -80,62 +221,246 @@
       "code" : "knative-py/kn-pagerank",
       "entryPoint" : "main",
       "payload" : "{\"size\":\"100\"}",
-      "memory"  : 2048,
-      "duration" : 12
+      "memory"  : 256,
+      "duration" : 8
     },
     "pydn" : {
       "language" : "python",
       "benchmarkName" : "pydn",
       "code" : "knative-py/kn-dna",
       "entryPoint" : "main",
-      "payload" : "{\"fasta_url\":\"http://172.18.0.1:8000/bacillus_subtilis.fasta\"}",
-      "memory"  : 2048,
-      "duration" : 27
+      "payload" : "{\"fasta_url\":\"http://172.17.0.1:8000/bacillus_subtilis.fasta\"}",
+      "memory"  : 256,
+      "duration" : 6
     },
     "pydh" : {
       "language" : "python",
       "benchmarkName" : "pydh",
       "code" : "knative-py/kn-dynamic-html",
       "entryPoint" : "main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
-      "memory"  : 1024,
-      "duration" : 14
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
+      "memory"  : 256,
+      "duration" : 10
     },
     "pyco" : {
       "language" : "python",
       "benchmarkName" : "pyco",
       "code" : "knative-py/kn-compression",
       "entryPoint" : "main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/video.mp4\"}",
-      "memory"  : 2048,
-      "duration" : 61
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/video.mp4\"}",
+      "memory"  : 256,
+      "duration" : 75
     },
     "pyth" : {
       "language" : "python",
       "benchmarkName" : "pyth",
       "code" : "knative-py/kn-thumbnail",
       "entryPoint" : "main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/snap.png\"}",
-      "memory"  : 1024,
-      "duration" : 21
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 20
     },
     "pyvp" : {
       "language" : "python",
       "benchmarkName" : "pyvp",
       "code" : "knative-py/kn-video-processing",
       "entryPoint" : "main",
-      "payload" : "{\"video\":\"http://172.18.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.18.0.1:8000/ffmpeg\"}",
-      "memory"  : 2048,
-      "duration" : 3052
+      "payload" : "{\"video\":\"http://172.17.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.17.0.1:8000/ffmpeg\"}",
+      "memory"  : 1024,
+      "duration" : 516
     },
     "pyup" : {
       "language" : "python",
       "benchmarkName" : "pyup",
       "code" : "knative-py/kn-uploader",
       "entryPoint" : "main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/snap.png\"}",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 12
+    },
+
+
+    "pyhw-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pyhw-snap",
+      "code" : "knative-py/kn-hello-world-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"name\":\"rbruno\"}",
+      "memory"  : 256,
+      "duration" : 6
+    },
+    "pyms-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pyms-snap",
+      "code" : "knative-py/kn-mst-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"size\":\"100\"}",
+      "memory"  : 256,
+      "duration" : 6
+    },
+    "pybf-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pybf-snap",
+      "code" : "knative-py/kn-bfs-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"size\":\"100\"}",
+      "memory"  : 256,
+      "duration" : 6
+    },
+    "pypr-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pypr-snap",
+      "code" : "knative-py/kn-pagerank-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"size\":\"100\"}",
+      "memory"  : 256,
+      "duration" : 7
+    },
+    "pydn-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pydn-snap",
+      "code" : "knative-py/kn-dna-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"fasta_url\":\"http://172.17.0.1:8000/bacillus_subtilis.fasta\"}",
+      "memory"  : 256,
+      "duration" : 6
+    },
+    "pydh-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pydh-snap",
+      "code" : "knative-py/kn-dynamic-html-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
+      "memory"  : 256,
+      "duration" : 8
+    },
+    "pyco-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pyco-snap",
+      "code" : "knative-py/kn-compression-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/video.mp4\"}",
+      "memory"  : 256,
+      "duration" : 73
+    },
+    "pyth-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pyth-snap",
+      "code" : "knative-py/kn-thumbnail-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 19
+    },
+    "pyvp-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pyvp-snap",
+      "code" : "knative-py/kn-video-processing-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"video\":\"http://172.17.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.17.0.1:8000/ffmpeg\"}",
       "memory"  : 1024,
-      "duration" : 15
+      "duration" : 519
+    },
+    "pyup-snap" : {
+      "language" : "python",
+      "benchmarkName" : "pyup-snap",
+      "code" : "knative-py/kn-uploader-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 12
+    },
+
+
+    "pyhw-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pyhw-warm",
+      "code" : "knative-py/kn-hello-world-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"name\":\"rbruno\"}",
+      "memory"  : 256,
+      "duration" : 5
+    },
+    "pyms-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pyms-warm",
+      "code" : "knative-py/kn-mst-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"size\":\"100\"}",
+      "memory"  : 256,
+      "duration" : 6
+    },
+    "pybf-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pybf-warm",
+      "code" : "knative-py/kn-bfs-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"size\":\"100\"}",
+      "memory"  : 256,
+      "duration" : 6
+    },
+    "pypr-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pypr-warm",
+      "code" : "knative-py/kn-pagerank-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"size\":\"100\"}",
+      "memory"  : 256,
+      "duration" : 7
+    },
+    "pydn-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pydn-warm",
+      "code" : "knative-py/kn-dna-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"fasta_url\":\"http://172.17.0.1:8000/bacillus_subtilis.fasta\"}",
+      "memory"  : 256,
+      "duration" : 6
+    },
+    "pydh-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pydh-warm",
+      "code" : "knative-py/kn-dynamic-html-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
+      "memory"  : 256,
+      "duration" : 8
+    },
+    "pyco-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pyco-warm",
+      "code" : "knative-py/kn-compression-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/video.mp4\"}",
+      "memory"  : 256,
+      "duration" : 73
+    },
+    "pyth-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pyth-warm",
+      "code" : "knative-py/kn-thumbnail-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 18
+    },
+    "pyvp-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pyvp-warm",
+      "code" : "knative-py/kn-video-processing-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"video\":\"http://172.17.0.1:8000/video.mp4\",\"ffmpeg\":\"http://172.17.0.1:8000/ffmpeg\"}",
+      "memory"  : 1024,
+      "duration" : 516
+    },
+    "pyup-warm" : {
+      "language" : "python",
+      "benchmarkName" : "pyup-warm",
+      "code" : "knative-py/kn-uploader-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 10
     },
   
   
@@ -154,27 +479,103 @@
       "benchmarkName" : "jsdh",
       "code" : "knative-js/kn-dynamic-html",
       "entryPoint" : "main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
       "memory"  : 256,
-      "duration" : 6
+      "duration" : 5
     },
     "jsth" : {
       "language" : "javascript",
       "benchmarkName" : "jsth",
       "code" : "knative-js/kn-thumbnail",
       "entryPoint" : "main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/snap.png\"}",
-      "memory"  : 512,
-      "duration" : 25
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 22
     },
     "jsup" : {
       "language" : "javascript",
       "benchmarkName" : "jsup",
       "code" : "knative-js/kn-uploader",
       "entryPoint" : "main",
-      "payload" : "{\"url\":\"http://172.18.0.1:8000/snap.png\"}",
-      "memory"  : 512,
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
       "duration" : 9
+    },
+
+
+    "jshw-snap" : {
+      "language" : "javascript",
+      "benchmarkName" : "jshw-snap",
+      "code" : "knative-js/kn-hello-world-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"name\":\"rbruno\"}",
+      "memory"  : 256,
+      "duration" : 4
+    },
+    "jsdh-snap" : {
+      "language" : "javascript",
+      "benchmarkName" : "jsdh-snap",
+      "code" : "knative-js/kn-dynamic-html-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
+      "memory"  : 256,
+      "duration" : 4
+    },
+    "jsth-snap" : {
+      "language" : "javascript",
+      "benchmarkName" : "jsth-snap",
+      "code" : "knative-js/kn-thumbnail-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 15
+    },
+    "jsup-snap" : {
+      "language" : "javascript",
+      "benchmarkName" : "jsup-snap",
+      "code" : "knative-js/kn-uploader-snap",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 5
+    },
+
+
+    "jshw-warm" : {
+      "language" : "javascript",
+      "benchmarkName" : "jshw-warm",
+      "code" : "knative-js/kn-hello-world-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"name\":\"rbruno\"}",
+      "memory"  : 256,
+      "duration" : 4
+    },
+    "jsdh-warm" : {
+      "language" : "javascript",
+      "benchmarkName" : "jsdh-warm",
+      "code" : "knative-js/kn-dynamic-html-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/template.html\",\"username\":\"rbruno\",\"nsize\":\"10\"}",
+      "memory"  : 256,
+      "duration" : 4
+    },
+    "jsth-warm" : {
+      "language" : "javascript",
+      "benchmarkName" : "jsth-warm",
+      "code" : "knative-js/kn-thumbnail-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 22
+    },
+    "jsup-warm" : {
+      "language" : "javascript",
+      "benchmarkName" : "jsup-warm",
+      "code" : "knative-js/kn-uploader-warm",
+      "entryPoint" : "main",
+      "payload" : "{\"url\":\"http://172.17.0.1:8000/snap.png\"}",
+      "memory"  : 256,
+      "duration" : 6
     }
   }
   

@@ -4,7 +4,7 @@ import org.graalvm.argo.dataset.OutputEntry;
 
 public class AOTOutputEntry extends OutputEntry {
 
-    protected int optimizedColdStarts;
+    public int optimizedColdStarts;
     protected int runningOptimizedFunctions;
 
     @Override

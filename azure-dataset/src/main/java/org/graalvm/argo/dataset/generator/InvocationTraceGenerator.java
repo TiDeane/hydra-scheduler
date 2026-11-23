@@ -95,7 +95,7 @@ public class InvocationTraceGenerator {
             FunctionInfoStorage.fillFunctionData(day);
             processDay(day, firstMinute, lastMinute);
 
-            String currentInput = inputFilePath + SORTED_FILE_SUFFIX;
+            String currentInput = inputFilePath + ".sorted_trace.csv";
 
             currentInput = runDownscaleStep(currentInput, getNextOutput(currentInput), maxFunctions, "functions", (in, out, limit) -> downscaleByFunctions(in, out, maxFunctions));
             currentInput = runDownscaleStep(currentInput, getNextOutput(currentInput), maxConcInv, "concurrent invocations", (in, out, limit) -> downscaleByConcurrentInvocations(in, out, maxConcInv));
@@ -150,6 +150,9 @@ public class InvocationTraceGenerator {
         if (compress) {
             writeMapping(outputFilePath, "function_mapping.csv", "HashFunction,CompressedHash", FunctionInfoStorage.COMPRESSED_MAPPING);
             writeMapping(outputFilePath, "owner_mapping.csv", "HashOwner,CompressedHash", compressedOwnerMapping);
+            writeDurationStats(outputFilePath, "function_durations.csv", "CompressedHash,P50Duration,P99Duration");
+        } else {
+            writeDurationStats(outputFilePath, "function_durations.csv", "HashFunction,P50Duration,P99Duration");
         }
     }
 
@@ -168,6 +171,28 @@ public class InvocationTraceGenerator {
         }
     }
 
+    private static void writeDurationStats(String path, String outputMapping, String header) throws IOException {
+        Path inputPath = Paths.get(path);
+        Path parentDir = inputPath.getParent();
+        File targetFile = (parentDir != null) ? parentDir.resolve(outputMapping).toFile() : new File(outputMapping);
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(targetFile, false))) {
+            writer.write(header);
+            writer.newLine();
+            for (String hash : FunctionInfoStorage.FUNCTIONS_SEEN) {
+                String id = hash;
+                if (FunctionInfoStorage.COMPRESSED_MAPPING.get(hash) != null) {
+                    id = FunctionInfoStorage.COMPRESSED_MAPPING.get(hash).toString();
+                }
+                long p50 = FunctionInfoStorage.P50_DURATIONS.get(hash);
+                long p99 = FunctionInfoStorage.P99_DURATIONS.get(hash);
+
+                writer.write(id  + "," + p50 + "," + p99);
+                writer.newLine();
+            }
+        }
+    }
+
     private static void processFunction(String line, int firstMinute, int lastMinute, BufferedWriter bw) {
         String[] splitRow = line.split(DELIMITER);
         String owner = splitRow[0];
@@ -180,6 +205,7 @@ public class InvocationTraceGenerator {
             return;
         }
 
+        FunctionInfoStorage.FUNCTIONS_SEEN.add(function);
         int memory = FunctionInfoStorage.MEMORIES.get(app);
         int duration = FunctionInfoStorage.DURATIONS.get(function);
 
@@ -208,8 +234,8 @@ public class InvocationTraceGenerator {
                         String.valueOf(duration), 
                         String.valueOf(timestamp)
                     );
-                    bw.write(csvLine);
-                    bw.newLine();
+                        bw.write(csvLine);
+                        bw.newLine();
                 }
                 ++currentMinute;
             }
@@ -238,7 +264,7 @@ public class InvocationTraceGenerator {
             inputFilePath = "input/invocations_per_function_md.anon." + datasetId + ".csv";
             File file = new File(inputFilePath);
             BufferedReader br = new BufferedReader(new FileReader(file));
-            BufferedWriter bw = new BufferedWriter(new FileWriter(inputFilePath + UNSORTED_FILE_SUFFIX, false));
+            BufferedWriter bw = new BufferedWriter(new FileWriter(inputFilePath + ".raw_unsorted_trace.csv", false));
             String line;
             br.readLine(); // To skip the header
             int fcounter = 1;
@@ -258,9 +284,9 @@ public class InvocationTraceGenerator {
 
         /* At this point, we have the unordered list of all invocations */
         try {
-            ExternalTraceSorter.sortTraceByTimestamp(inputFilePath + UNSORTED_FILE_SUFFIX, inputFilePath + SORTED_FILE_SUFFIX, false);
+            ExternalTraceSorter.sortTraceByTimestamp(inputFilePath + ".raw_unsorted_trace.csv", inputFilePath + ".sorted_trace.csv", false);
             System.out.println("Finished sorting.");
-            new File(inputFilePath + UNSORTED_FILE_SUFFIX).delete();
+            new File(inputFilePath + ".raw_unsorted_trace.csv").delete();
         } catch (IOException ioe) {
             ioe.printStackTrace();
             new File(inputFilePath + SORTED_FILE_SUFFIX).delete();
